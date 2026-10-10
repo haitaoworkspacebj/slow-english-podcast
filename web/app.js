@@ -1,5 +1,8 @@
-/* Slow English Podcast · static demo — layout constants kept in sync with render.py */
+/* Slow English Podcast · static demo — layout constants kept in sync with render.py.
+   No TTS: voice and BGM are uploaded by the user (or auto-loaded from bundled defaults).
+   Generate preview = real-time render; Generate video = record canvas + audio mix, then auto-download. */
 const t = (key, ...args) => window.I18N ? window.I18N.t(key, ...args) : key;
+
 const W = 1920, H = 1080, FPS = 30;
 const BG = "#484848", WHITE = "#ffffff", YELLOW = "#F6DF13", GRAY = "#B5B5B5";
 const SIZE_EN = 62, SIZE_ZH = 54, SIZE_TAG = 30;
@@ -28,6 +31,15 @@ const S = {
 
 function setStatus(text) { $("status").textContent = text; }
 function setProgress(p) { $("bar").style.width = Math.round(Math.min(1, Math.max(0, p)) * 100) + "%"; }
+function showError(msg) {
+  const box = $("errorBox");
+  if (!box) return;
+  if (!msg) { box.hidden = true; box.textContent = ""; return; }
+  box.hidden = false;
+  box.textContent = msg;
+}
+window.addEventListener("error", (e) => showError(`${e.message || e}`));
+window.addEventListener("unhandledrejection", (e) => showError(`${(e.reason && e.reason.message) || e.reason || e}`));
 
 // ---------- 文字 ----------
 
@@ -262,7 +274,6 @@ let audioCtx = null, nodes = [], playStart = 0, rafId = 0, tickTimer = 0, record
 
 function ensureCtx() {
   if (!audioCtx) audioCtx = new AudioContext();
-  // 自动播放策略下可能被挂起，导致时钟冻结、画面不动
   if (audioCtx.state === "suspended") audioCtx.resume();
   return audioCtx;
 }
@@ -274,15 +285,18 @@ function stopPlayback() {
   cancelAnimationFrame(rafId);
   clearInterval(tickTimer);
   if (recorder && recorder.state === "recording") recorder.stop();
+  // After voice naturally ends, status doesn't auto-update because the rAF loop
+  // stops scheduling itself. Set it explicitly so the UI doesn't stick on "Playing…".
+  if (!recorder || recorder.state !== "recording") {
+    setStatus(t("status.stopped"));
+  }
 }
 
 function play() {
   stopPlayback();
   const ac = ensureCtx();
   const master = ac.createGain();
-  const dest = ac.createMediaStreamDestination();
   master.connect(ac.destination);
-  master.connect(dest);
 
   playStart = ac.currentTime + 0.05;
   let endAt = playStart + 30;
@@ -291,6 +305,7 @@ function play() {
     v.buffer = S.voice;
     v.connect(master);
     v.start(playStart);
+    v.onended = () => { if (!recorder || recorder.state !== "recording") stopPlayback(); };
     nodes.push(v);
     endAt = playStart + S.voice.duration;
   }
@@ -308,17 +323,12 @@ function play() {
     nodes.push(b);
   }
   S.playing = true;
-  S.streamDest = dest;
-  setStatus(S.voice || S.bgm ? t("status.playing") : t("status.playingNoAudio"));
+  setStatus(t("status.playing"));
   let lastDraw = 0;
   const step = () => {
     lastDraw = performance.now();
     const cur = audioCtx.currentTime - playStart;
     drawFrame(Math.max(0, cur));
-    if (recorder && recorder.state === "recording") {
-      setProgress(cur / recStopAt);
-      if (cur >= recStopAt) stopPlayback();
-    }
     if (!S.playing && (!recorder || recorder.state !== "recording")) setStatus(t("status.stopped"));
   };
   const tick = () => {
@@ -326,10 +336,24 @@ function play() {
     if (S.playing) rafId = requestAnimationFrame(tick);
   };
   rafId = requestAnimationFrame(tick);
-  // rAF 可能被节流（后台标签等），定时器兜底保证画面与录制帧持续推进
   tickTimer = setInterval(() => {
     if (S.playing && performance.now() - lastDraw > 120) step();
   }, 33);
+}
+
+function refreshDownloadLink() {
+  const a = $("downloadLink");
+  if (!a) return;
+  if (S.lastBlob && S.lastUrl) {
+    const ext = (S.lastBlob.type || "").includes("mp4") ? "mp4" : "webm";
+    a.href = S.lastUrl;
+    a.download = `slow_english_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.${ext}`;
+    a.hidden = false;
+  } else {
+    a.removeAttribute("href");
+    a.removeAttribute("download");
+    a.hidden = true;
+  }
 }
 
 function pickMime() {
@@ -340,37 +364,105 @@ function pickMime() {
 }
 
 function record() {
-  if (!window.MediaRecorder) return setStatus(t("status.unsupportedRecord"));
+  if (!window.MediaRecorder) { showError(t("error.noMediaRecorder")); return; }
+  if (!S.voice && !S.bgm) { showError(t("error.nothingToRecord")); return; }
+  // Clear any previous recording result before starting a new one
+  if (S.lastUrl) { URL.revokeObjectURL(S.lastUrl); }
+  S.lastBlob = null;
+  S.lastUrl = null;
+  refreshDownloadLink();
   stopPlayback();
   setProgress(0);
-  play(); // 录制从头播放并同步录制画布 + 混音
-  const mime = pickMime();
+  showError("");
+  const ac = ensureCtx();
+  // MediaStreamDestination so the recorder grabs the mixed audio
+  const dest = ac.createMediaStreamDestination();
+  ac.createGain(); // touch master chain
+  playWithDest(dest);
+
   const stream = new MediaStream([
     ...canvas.captureStream(FPS).getVideoTracks(),
-    ...S.streamDest.stream.getAudioTracks(),
+    ...dest.stream.getAudioTracks(),
   ]);
-  recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
+  const mime = pickMime();
+  try {
+    recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
+  } catch (err) {
+    showError(`${t("error.recorderInit")}: ${err.message}`);
+    return;
+  }
   recChunks = [];
-  recorder.ondataavailable = (e) => e.data.size && recChunks.push(e.data);
+  recorder.ondataavailable = (e) => { if (e.data.size) recChunks.push(e.data); };
   recorder.onstop = () => {
     const type = (recorder.mimeType || "video/webm").split(";")[0];
     const blob = new Blob(recChunks, { type });
-    const url = URL.createObjectURL(blob);
-    $("player").src = url;
-    $("player").play().catch(() => {});
-    const dl = $("download");
-    dl.href = url;
-    dl.download = "slow_english_demo." + (type.includes("mp4") ? "mp4" : "webm");
-    dl.hidden = false;
-    recorder = null;
+    const ext = type.includes("mp4") ? "mp4" : "webm";
+    S.lastBlob = blob;
+    S.lastUrl = URL.createObjectURL(blob);
     setProgress(1);
+    recorder = null;
     setStatus(t("status.recordDone"));
+    refreshDownloadLink();
   };
   const want = +$("recSeconds").value;
   const full = S.voice ? S.voice.duration : 30;
   recStopAt = want > 0 ? Math.min(want, full) : full;
   recorder.start();
   setStatus(t("status.recording", Math.round(recStopAt)));
+}
+
+function playWithDest(dest) {
+  // play() that pipes to a MediaStreamDestination for recording (in addition to speakers)
+  stopPlayback();
+  const ac = ensureCtx();
+  const master = ac.createGain();
+  master.connect(ac.destination);
+  master.connect(dest);
+
+  playStart = ac.currentTime + 0.05;
+  let endAt = playStart + 30;
+  if (S.voice) {
+    const v = ac.createBufferSource();
+    v.buffer = S.voice;
+    v.connect(master);
+    v.start(playStart);
+    v.onended = () => { stopPlayback(); };
+    nodes.push(v);
+    endAt = playStart + S.voice.duration;
+  }
+  if (S.bgm) {
+    const b = ac.createBufferSource();
+    b.buffer = S.bgm;
+    b.loop = true;
+    const g = ac.createGain();
+    b.connect(g).connect(master);
+    b.start(playStart);
+    b.stop(endAt);
+    const fadeStart = Math.max(playStart, endAt - BGM_FADE);
+    g.gain.setValueAtTime(1, fadeStart);
+    g.gain.linearRampToValueAtTime(0, endAt);
+    nodes.push(b);
+  }
+  S.playing = true;
+  setStatus(t("status.recording", Math.round(endAt - playStart)));
+  let lastDraw = 0;
+  const step = () => {
+    lastDraw = performance.now();
+    const cur = audioCtx.currentTime - playStart;
+    drawFrame(Math.max(0, cur));
+    if (recorder && recorder.state === "recording") {
+      setProgress(Math.min(1, cur / recStopAt));
+      if (cur >= recStopAt) stopPlayback();
+    }
+  };
+  const tick = () => {
+    step();
+    if (S.playing) rafId = requestAnimationFrame(tick);
+  };
+  rafId = requestAnimationFrame(tick);
+  tickTimer = setInterval(() => {
+    if (S.playing && performance.now() - lastDraw > 120) step();
+  }, 33);
 }
 
 // ---------- 文件加载 ----------
@@ -424,7 +516,7 @@ function parseSrt(text) {
     if (lines.length < 2 || !lines[1].includes("-->")) continue;
     const [a, b] = lines[1].split("-->").map((s) => toSec(s.trim()));
     const body = lines.slice(2).filter((l) => l.trim());
-    if (b - a < 0.5) continue;                       // 与 make_bilingual_srt.py 一致：丢弃碎片
+    if (b - a < 0.5) continue;
     cues.push({ a, b, en: body[0] || "", zh: body[1] || "" });
   }
   return cues;
@@ -432,30 +524,75 @@ function parseSrt(text) {
 
 const HANDLERS = {
   async voice(file) {
-    S.voice = await loadAudio(file);
+    showError("");
+    setStatus(t("status.loading", file.name));
+    try {
+      S.voice = await loadAudio(file);
+    } catch (err) {
+      showError(`${t("error.decodeAudio")} (${file.name}): ${err.message}`);
+      return;
+    }
     S.voiceName = file.name;
     $("voiceName").textContent = file.name;
     setStatus(t("status.analyzing"));
-    await new Promise((r) => setTimeout(r, 30));   // let the status text paint before the blocking FFT
-    S.levels = barLevels(await toMono22k(S.voice));
+    await new Promise((r) => setTimeout(r, 30));
+    try {
+      S.levels = barLevels(await toMono22k(S.voice));
+    } catch (err) {
+      showError(`${t("error.fft")}: ${err.message}`);
+      S.levels = null;
+    }
     drawFrame(0);
     setStatus(t("status.voiceLoaded", file.name, S.voice.duration.toFixed(1)));
   },
   async bgm(file) {
-    S.bgm = await loadAudio(file);
+    showError("");
+    setStatus(t("status.loading", file.name));
+    try {
+      S.bgm = await loadAudio(file);
+    } catch (err) {
+      showError(`${t("error.decodeAudio")} (${file.name}): ${err.message}`);
+      return;
+    }
     S.bgmName = file.name;
     $("bgmName").textContent = file.name;
     setStatus(t("status.bgmLoaded", file.name));
   },
   async imgLeft(file) {
-    S.imgLeft = await loadImage(file);
+    showError("");
+    setStatus(t("status.loading", file.name));
+    try {
+      S.imgLeft = await loadImage(file);
+    } catch (err) {
+      showError(`${t("error.decodeImage")} (${file.name}): ${err.message}`);
+      return;
+    }
     $("imgLeftName").textContent = file.name;
     rebuildBase(); drawFrame(0);
   },
-  async fontMain(file) { await loadFont(file, "fontMain"); rebuildBase(); drawFrame(0); },
-  async fontTag(file) { await loadFont(file, "fontTag"); rebuildBase(); drawFrame(0); },
+  async fontMain(file) {
+    showError("");
+    setStatus(t("status.loading", file.name));
+    try { await loadFont(file, "fontMain"); }
+    catch (err) { showError(`${t("error.font")} (${file.name}): ${err.message}`); return; }
+    rebuildBase(); drawFrame(0);
+  },
+  async fontTag(file) {
+    showError("");
+    setStatus(t("status.loading", file.name));
+    try { await loadFont(file, "fontTag"); }
+    catch (err) { showError(`${t("error.font")} (${file.name}): ${err.message}`); return; }
+    rebuildBase(); drawFrame(0);
+  },
   async srt(file) {
-    S.cues = parseSrt(await file.text());
+    showError("");
+    setStatus(t("status.loading", file.name));
+    try {
+      S.cues = parseSrt(await file.text());
+    } catch (err) {
+      showError(`${t("error.srt")} (${file.name}): ${err.message}`);
+      return;
+    }
     S.srtName = file.name;
     $("srtName").textContent = `${file.name} (${t("srt.count", S.cues.length)})`;
     drawFrame(0);
@@ -469,9 +606,8 @@ const CLEAR = {
   srt() { S.cues = []; $("srtName").textContent = t("file.notSelectedWithDemo"); },
 };
 
-// ---------- 默认素材（当前一集） ----------
-// 按相对路径自动找文件：页面旁的 assets/ 等目录，或上级目录（整个项目托管时）
-// file:// 打开时 fetch 被浏览器禁止，自动跳过并提示手动选择
+// ---------- 默认素材（仅本地 fetch，从 dist/ 根读取；file:// 下浏览器会拒，自动跳过） ----------
+
 const DEFAULTS = [
   ["fontMain", ["AlibabaPuHuiTi-Bold.otf", "fonts/AlibabaPuHuiTi-Bold.otf", "../fonts/AlibabaPuHuiTi-Bold.otf"]],
   ["fontTag", ["AlibabaPuHuiTi-Regular.otf", "fonts/AlibabaPuHuiTi-Regular.otf", "../fonts/AlibabaPuHuiTi-Regular.otf"]],
@@ -483,7 +619,7 @@ const DEFAULTS = [
 
 async function loadDefaults() {
   if (S.touched) return;
-  let ok = 0;
+  let loadedCount = 0;
   const missing = [];
   for (const [kind, paths] of DEFAULTS) {
     if (S.touched) return;
@@ -492,21 +628,22 @@ async function loadDefaults() {
       try {
         const res = await fetch(p);
         if (!res.ok) continue;
-        setStatus(t("status.loadingDefault", ok + 1, DEFAULTS.length, p.split("/").pop()));
+        setStatus(t("status.loadingDefault", loadedCount + 1, DEFAULTS.length, p.split("/").pop()));
         await HANDLERS[kind](new File([await res.blob()], p.split("/").pop()));
-        ok++; done = true;
+        loadedCount++;
+        done = true;
         break;
-      } catch (e) { /* file:// 或路径不对，试下一个 */ }
+      } catch (e) { /* file:// or wrong path, try next */ }
     }
     if (!done) missing.push(kind);
   }
   if (S.touched) return;
-  if (ok === 0) {
+  if (loadedCount === 0) {
     setStatus(location.protocol === "file:"
       ? t("status.fileProtocolWarn")
       : t("status.noDefaults"));
   } else if (missing.length) {
-    setStatus(t("status.partialDefaults", ok, DEFAULTS.length, missing.join(", ")));
+    setStatus(t("status.partialDefaults", loadedCount, DEFAULTS.length, missing.join(", ")));
   } else {
     setStatus(t("status.defaultsReady"));
   }
@@ -514,7 +651,7 @@ async function loadDefaults() {
 
 document.querySelectorAll("[data-file]").forEach((btn) => {
   btn.addEventListener("click", () => {
-    S.touched = true;                       // 用户手动操作后，默认素材加载让位
+    S.touched = true;
     const kind = btn.dataset.file;
     const input = $("fileInput");
     input.accept = ACCEPT[kind];
@@ -526,7 +663,7 @@ document.querySelectorAll("[data-file]").forEach((btn) => {
       try {
         await HANDLERS[kind](f);
       } catch (e) {
-        setStatus(t("status.loadFailed", e.message));
+        showError(`${t("error.handler")} (${kind}): ${e.message || e}`);
       }
     };
     input.click();
@@ -560,9 +697,14 @@ for (const id of ["enText", "zhText"]) {
   $(id).addEventListener("input", () => drawFrame(0));
 }
 
-$("btnPlay").addEventListener("click", play);
-$("btnStop").addEventListener("click", () => { stopPlayback(); setStatus(t("status.stopped")); drawFrame(0); });
-$("btnRecord").addEventListener("click", record);
+$("btnPlay").addEventListener("click", () => { showError(""); play(); });
+$("btnStop").addEventListener("click", () => {
+  stopPlayback();
+  setStatus(t("status.stopped"));
+  setProgress(0);
+  drawFrame(0);
+});
+$("btnRecord").addEventListener("click", () => { showError(""); record(); });
 
 rebuildBase();
 drawFrame(0);
