@@ -395,6 +395,10 @@ function playWithDest(dest, mode /* "preview" | "record" */) {
     nodes.push(b);
   }
   S.playing = true;
+  // IMPORTANT: set the busy state AFTER stopPlayback above. stopPlayback
+  // calls setActionsState("idle") to clear any previous session, and we
+  // need that to be overwritten by our new busy state.
+  setActionsState("busy");
   setStatus(mode === "record"
     ? t("status.recording", Math.round(endAt - playStart))
     : t("status.playing"));
@@ -426,7 +430,7 @@ function playWithDest(dest, mode /* "preview" | "record" */) {
 function preview() {
   if (!S.voice && !S.bgm) { showError(t("error.nothingToPreview")); return; }
   showError("");
-  setActionsState("busy");
+  // playWithDest sets the busy action state internally.
   playWithDest(null, "preview");
 }
 
@@ -478,7 +482,8 @@ function record() {
   showError("");
   setStatus(t("status.loadingRecord"));
   setVideoOverlay(t("status.loadingRecord"));
-  setActionsState("busy");
+  // playWithDest sets the busy action state internally; doing it here
+  // would be undone by its inner stopPlayback() call.
   const ac = ensureCtx();
   const dest = ac.createMediaStreamDestination();
   destForRec = dest;
