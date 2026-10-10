@@ -40,7 +40,6 @@ The demo loads the bundled episode automatically. Replace any asset, preview the
 - [🔧 How it works](#-how-it-works)
 - [🌍 Internationalization](#-internationalization)
 - [🤝 Contributing](#-contributing)
-- [⭐ Star History](#-star-history)
 - [📄 License](#-license)
 
 ---
@@ -161,9 +160,11 @@ That's the whole change set — no other files need to know about it.
 
 Issues and small patches are welcome. For anything beyond a typo fix, open an issue first so the approach can be agreed on. The render pipeline (`render.py`) and the browser demo (`web/`) **must stay in sync on layout constants** — any change to bar height, subtitle position, or fade duration has to be applied to both code paths and verified against `template/demo.png`.
 
-## ⭐ Star History
+## ⭐ Like it? Star it.
 
-[![Star History Chart](https://api.star-history.com/svg?repos=haituoworkspacebj/slow-english-podcast&type=Date)](https://star-history.com/#haituoworkspacebj/slow-english-podcast&Date)
+If this project saves you time or inspires something of your own, a star on GitHub helps others find it — and tells me the idea is worth investing more in.
+
+[**→ Star haituoworkspacebj/slow-english-podcast**](https://github.com/haituoworkspacebj/slow-english-podcast)
 
 ---
 

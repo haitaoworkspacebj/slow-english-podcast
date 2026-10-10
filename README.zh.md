@@ -40,7 +40,6 @@
 - [🔧 工作原理](#-工作原理)
 - [🌍 国际化](#-国际化)
 - [🤝 参与贡献](#-参与贡献)
-- [⭐ Star History](#-star-history)
 - [📄 字体授权](#-字体授权)
 
 ---
@@ -160,9 +159,11 @@ python3 render.py video \
 
 欢迎提 Issue 和小补丁。除错别字以外的改动，请先开个 Issue 对齐方案。`render.py` 离线渲染和 `web/` 浏览器 demo **必须保持版式常量同步**——任何对条形高度、字幕位置、淡入淡出时长的改动都要同步两路，并以 `template/demo.png` 作为参照。
 
-## ⭐ Star History
+## ⭐ 觉得有用？点个 ⭐
 
-[![Star History Chart](https://api.star-history.com/svg?repos=haituoworkspacebj/slow-english-podcast&type=Date)](https://star-history.com/#haituoworkspacebj/slow-english-podcast&Date)
+如果这个项目帮你省了时间，或者启发了什么新点子——GitHub 上点个 ⭐ 就能让更多人发现它，也让我更有动力继续投入。
+
+[**→ Star haituoworkspacebj/slow-english-podcast**](https://github.com/haituoworkspacebj/slow-english-podcast)
 
 ---
 
