@@ -1,4 +1,5 @@
-/* 慢速英语播客 · 静态 demo —— 版式参数与 render.py 保持一致 */
+/* Slow English Podcast · static demo — layout constants kept in sync with render.py */
+const t = (key, ...args) => window.I18N ? window.I18N.t(key, ...args) : key;
 const W = 1920, H = 1080, FPS = 30;
 const BG = "#484848", WHITE = "#ffffff", YELLOW = "#F6DF13", GRAY = "#B5B5B5";
 const SIZE_EN = 62, SIZE_ZH = 54, SIZE_TAG = 30;
@@ -102,7 +103,7 @@ function rebuildBase() {
   drawCentered(baseCtx, TAGLINE, `400 ${SIZE_TAG}px ${S.fontTag ? `"${S.fontTag}", ` : ""}sans-serif`, SIZE_TAG, Y_TAG, GRAY);
 }
 
-// ---------- 声波（与 render.py 的 bar_levels 同算法） ----------
+// ---------- 声波（与 render.py 的 bar_levels 同算法，仅跟随人声，不受 BGM 影响） ----------
 
 function fft(re, im) {
   const n = re.length;
@@ -308,17 +309,17 @@ function play() {
   }
   S.playing = true;
   S.streamDest = dest;
-  setStatus(S.voice || S.bgm ? "播放中 …" : "播放中（未加载音频，仅版式）…");
+  setStatus(S.voice || S.bgm ? t("status.playing") : t("status.playingNoAudio"));
   let lastDraw = 0;
   const step = () => {
     lastDraw = performance.now();
-    const t = audioCtx.currentTime - playStart;
-    drawFrame(Math.max(0, t));
+    const cur = audioCtx.currentTime - playStart;
+    drawFrame(Math.max(0, cur));
     if (recorder && recorder.state === "recording") {
-      setProgress(t / recStopAt);
-      if (t >= recStopAt) stopPlayback();
+      setProgress(cur / recStopAt);
+      if (cur >= recStopAt) stopPlayback();
     }
-    if (!S.playing && (!recorder || recorder.state !== "recording")) setStatus("已停止");
+    if (!S.playing && (!recorder || recorder.state !== "recording")) setStatus(t("status.stopped"));
   };
   const tick = () => {
     step();
@@ -339,7 +340,7 @@ function pickMime() {
 }
 
 function record() {
-  if (!window.MediaRecorder) return setStatus("当前浏览器不支持录制");
+  if (!window.MediaRecorder) return setStatus(t("status.unsupportedRecord"));
   stopPlayback();
   setProgress(0);
   play(); // 录制从头播放并同步录制画布 + 混音
@@ -363,13 +364,13 @@ function record() {
     dl.hidden = false;
     recorder = null;
     setProgress(1);
-    setStatus("录制完成，可播放 / 下载");
+    setStatus(t("status.recordDone"));
   };
   const want = +$("recSeconds").value;
   const full = S.voice ? S.voice.duration : 30;
   recStopAt = want > 0 ? Math.min(want, full) : full;
   recorder.start();
-  setStatus(`录制中（实时，约 ${Math.round(recStopAt)} 秒）…`);
+  setStatus(t("status.recording", Math.round(recStopAt)));
 }
 
 // ---------- 文件加载 ----------
@@ -399,7 +400,7 @@ function refreshFontSelects() {
     sel.innerHTML = "";
     const def = document.createElement("option");
     def.value = "";
-    def.textContent = "默认字体";
+    def.textContent = t("file.fontDefault");
     sel.appendChild(def);
     for (const f of S.fonts) {
       const o = document.createElement("option");
@@ -434,17 +435,17 @@ const HANDLERS = {
     S.voice = await loadAudio(file);
     S.voiceName = file.name;
     $("voiceName").textContent = file.name;
-    setStatus("分析声波 …");
-    await new Promise((r) => setTimeout(r, 30));   // 让状态文字先画出来，下面的 FFT 会阻塞
+    setStatus(t("status.analyzing"));
+    await new Promise((r) => setTimeout(r, 30));   // let the status text paint before the blocking FFT
     S.levels = barLevels(await toMono22k(S.voice));
     drawFrame(0);
-    setStatus(`已加载人声 ${file.name}（${S.voice.duration.toFixed(1)}s）`);
+    setStatus(t("status.voiceLoaded", file.name, S.voice.duration.toFixed(1)));
   },
   async bgm(file) {
     S.bgm = await loadAudio(file);
     S.bgmName = file.name;
     $("bgmName").textContent = file.name;
-    setStatus(`已加载 BGM ${file.name}`);
+    setStatus(t("status.bgmLoaded", file.name));
   },
   async imgLeft(file) {
     S.imgLeft = await loadImage(file);
@@ -456,16 +457,16 @@ const HANDLERS = {
   async srt(file) {
     S.cues = parseSrt(await file.text());
     S.srtName = file.name;
-    $("srtName").textContent = `${file.name}（${S.cues.length} 条）`;
+    $("srtName").textContent = `${file.name} (${t("srt.count", S.cues.length)})`;
     drawFrame(0);
   },
 };
 
 const CLEAR = {
-  voice() { S.voice = null; S.levels = null; $("voiceName").textContent = "未选择"; },
-  bgm() { S.bgm = null; $("bgmName").textContent = "无 BGM"; },
-  imgLeft() { S.imgLeft = null; $("imgLeftName").textContent = "未选择"; rebuildBase(); },
-  srt() { S.cues = []; $("srtName").textContent = "未选择（用下方演示文本）"; },
+  voice() { S.voice = null; S.levels = null; $("voiceName").textContent = t("file.notSelected"); },
+  bgm() { S.bgm = null; $("bgmName").textContent = t("file.noBgm"); },
+  imgLeft() { S.imgLeft = null; $("imgLeftName").textContent = t("file.notSelected"); rebuildBase(); },
+  srt() { S.cues = []; $("srtName").textContent = t("file.notSelectedWithDemo"); },
 };
 
 // ---------- 默认素材（当前一集） ----------
@@ -491,7 +492,7 @@ async function loadDefaults() {
       try {
         const res = await fetch(p);
         if (!res.ok) continue;
-        setStatus(`加载默认素材（${ok + 1}/${DEFAULTS.length}）：${p.split("/").pop()} …`);
+        setStatus(t("status.loadingDefault", ok + 1, DEFAULTS.length, p.split("/").pop()));
         await HANDLERS[kind](new File([await res.blob()], p.split("/").pop()));
         ok++; done = true;
         break;
@@ -502,12 +503,12 @@ async function loadDefaults() {
   if (S.touched) return;
   if (ok === 0) {
     setStatus(location.protocol === "file:"
-      ? "双击打开（file://）时浏览器不允许网页自动读本地文件，请在左侧手动选择素材；放到静态托管会自动带上默认素材"
-      : "未找到默认素材（assets/、fonts/、subtitles/），请在左侧手动选择");
+      ? t("status.fileProtocolWarn")
+      : t("status.noDefaults"));
   } else if (missing.length) {
-    setStatus(`默认素材已加载 ${ok}/${DEFAULTS.length}，缺少：${missing.join("、")}（可手动补选）`);
+    setStatus(t("status.partialDefaults", ok, DEFAULTS.length, missing.join(", ")));
   } else {
-    setStatus("默认素材已就绪（当前一集），点“播放”预览");
+    setStatus(t("status.defaultsReady"));
   }
 }
 
@@ -521,11 +522,11 @@ document.querySelectorAll("[data-file]").forEach((btn) => {
     input.onchange = async () => {
       const f = input.files[0];
       if (!f) return;
-      setStatus(`加载 ${f.name} …`);
+      setStatus(t("status.loading", f.name));
       try {
         await HANDLERS[kind](f);
       } catch (e) {
-        setStatus(`加载失败：${e.message}`);
+        setStatus(t("status.loadFailed", e.message));
       }
     };
     input.click();
@@ -560,10 +561,10 @@ for (const id of ["enText", "zhText"]) {
 }
 
 $("btnPlay").addEventListener("click", play);
-$("btnStop").addEventListener("click", () => { stopPlayback(); setStatus("已停止"); drawFrame(0); });
+$("btnStop").addEventListener("click", () => { stopPlayback(); setStatus(t("status.stopped")); drawFrame(0); });
 $("btnRecord").addEventListener("click", record);
 
 rebuildBase();
 drawFrame(0);
-setStatus("就绪：加载素材后点“播放”或“录制视频”");
+setStatus(t("status.ready"));
 loadDefaults();

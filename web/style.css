@@ -212,3 +212,28 @@ details .row { margin-top: 8px; }
 details .hint { margin-top: 6px; line-height: 1.5; }
 
 #ttsEngineHint { margin-top: 6px; line-height: 1.5; }
+
+/* header layout + language switch */
+.hdr-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted, #888);
+}
+.lang-switch select {
+  background: #1c1c1c;
+  color: #f4f4f4;
+  border: 1px solid var(--line, #333);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
