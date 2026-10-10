@@ -13,15 +13,11 @@
 
 ## 🎬 演示
 
-<video controls preload="metadata" poster="media/slow_english_demo.jpg" style="max-width: 100%; border-radius: 8px;">
-  <source src="media/slow_english_demo.mp4" type="video/mp4">
-  你的浏览器不支持内嵌视频。
-  <a href="media/slow_english_demo.mp4">下载 MP4</a> 观看。
-</video>
+<a href="media/slow_english_demo.mp4"><img src="media/slow_english_demo.gif" alt="30 秒样片（无声预览）——点击查看有声 MP4" style="max-width: 100%; border-radius: 8px;"></a>
 
-> 30 秒真实渲染片段：中英双语字幕、人声驱动声波、BGM 衬底。如果播放器不出现（例如 GitHub README 会剥掉 `<video>` 标签），用下方链接。
+> 30 秒真实渲染片段：中英双语字幕、人声驱动声波、BGM 衬底。上面 GIF 是无声循环；点击图片查看有声 MP4，或用下方链接。
 
-<a href="media/slow_english_demo.mp4">↓ 直接下载 / 播放 MP4</a>
+<a href="media/slow_english_demo.mp4">↓ 下载 / 播放 MP4（含声音）</a>
 
 ### 立即试用
 
