@@ -29,7 +29,8 @@
       "btn.stop": "■ Stop",
       "btn.record": "● Generate video",
 
-      "stage.layout": "Layout preview (1920×1080)",
+      "stage.video": "Video",
+      "stage.previewHint": "This is a 30-second sample render. Click Generate video to record your own with the loaded assets.",
 
       "status.ready": "Ready: load assets then click Generate preview or Generate video",
       "status.analyzing": "Analyzing waveform…",
@@ -99,7 +100,8 @@
       "btn.stop": "■ 停止",
       "btn.record": "● 生成视频",
 
-      "stage.layout": "版式预览（1920×1080）",
+      "stage.video": "视频",
+      "stage.previewHint": "这是 30 秒样片。点击 Generate video 用当前素材录制你自己的版本。",
 
       "status.ready": "就绪：加载素材后点「生成预览」或「生成视频」",
       "status.analyzing": "分析声波 …",
