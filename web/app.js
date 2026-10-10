@@ -11,7 +11,6 @@ const Y_EN = 238, Y_ZH = 423, Y_TAG = 1002;
 const TEXT_MAX_W = W * 0.84;
 const WAVE_CX = W / 2, WAVE_CY = 763, N_BARS = 49, BAR_W = 6, BAR_GAP = 5, BAR_MIN = 6, BAR_MAX = 120;
 const FADE = 0.15, BGM_FADE = 3, IMG_MARGIN = 30;
-const TAGLINE = "——这样建立你的“英语脑”——";
 const ACCEPT = { voice: "audio/*", bgm: "audio/*", imgLeft: "image/*", srt: ".srt", fontMain: ".otf,.ttf", fontTag: ".otf,.ttf" };
 
 const $ = (id) => document.getElementById(id);
@@ -111,7 +110,7 @@ function rebuildBase() {
   baseCtx.fillStyle = BG;
   baseCtx.fillRect(0, 0, W, H);
   if (S.imgLeft) drawPodcaster(baseCtx, S.imgLeft, S.imgLeftH);
-  drawCentered(baseCtx, TAGLINE, `400 ${SIZE_TAG}px ${S.fontTag ? `"${S.fontTag}", ` : ""}sans-serif`, SIZE_TAG, Y_TAG, GRAY);
+  drawCentered(baseCtx, t("tagline"), `400 ${SIZE_TAG}px ${S.fontTag ? `"${S.fontTag}", ` : ""}sans-serif`, SIZE_TAG, Y_TAG, GRAY);
 }
 
 function fft(re, im) {
