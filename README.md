@@ -13,9 +13,15 @@
 
 ## 🎬 Demo
 
-<a target="_blank" rel="noopener noreferrer" href="media/slow_english_demo.mp4"><img src="media/slow_english_demo.jpg" alt="30-second demo video — click to download / play" style="max-width: 100%; border-radius: 8px;"></a>
+<video controls preload="metadata" poster="media/slow_english_demo.jpg" style="max-width: 100%; border-radius: 8px;">
+  <source src="media/slow_english_demo.mp4" type="video/mp4">
+  Your browser does not support embedded video.
+  <a href="media/slow_english_demo.mp4">Download the MP4</a> to watch.
+</video>
 
-> 30 seconds from a real render: bilingual subtitles, voice-driven waveform, and BGM underneath. Click the frame to download / play the MP4.
+> 30 seconds from a real render: bilingual subtitles, voice-driven waveform, and BGM underneath. If the player doesn't appear (e.g. GitHub README strips `<video>`), use the link below.
+
+<a href="media/slow_english_demo.mp4">↓ Download / play the MP4 directly</a>
 
 ### Try it now
 
