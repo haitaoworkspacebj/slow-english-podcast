@@ -11,7 +11,7 @@
 
 ---
 
-## Demo
+## 🎬 Demo
 
 ![30-second demo video](media/slow_english_demo.mp4)
 
@@ -23,7 +23,7 @@
 
 The demo loads the bundled episode automatically. Replace any asset, preview the layout live, then click **Generate video** to record the canvas + audio mix and download the file. No upload, no server, no TTS — voice and BGM are user-supplied (defaults are pre-loaded from the bundled assets).
 
-### Screenshots
+### 📸 Screenshots
 
 | Desktop | Mobile |
 |---|---|
@@ -31,22 +31,23 @@ The demo loads the bundled episode automatically. Replace any asset, preview the
 
 ---
 
-## Contents
+## 📑 Contents
 
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [Configuration](#configuration)
-- [Repository](#repository)
-- [How it works](#how-it-works)
-- [Internationalization](#internationalization)
-- [Contributing](#contributing)
-- [License](#license)
+- [🚀 Quick Start](#-quick-start)
+- [✨ Features](#-features)
+- [⚙️ Configuration](#-configuration)
+- [📂 Repository](#-repository)
+- [🔧 How it works](#-how-it-works)
+- [🌍 Internationalization](#-internationalization)
+- [🤝 Contributing](#-contributing)
+- [⭐ Star History](#-star-history)
+- [📄 License](#-license)
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
-### Browser demo (no install)
+### 🌐 Browser demo (no install)
 
 1. Open https://haituoworkspacebj.github.io/slow-english-podcast/
 2. Click **▶ Generate preview** to render the layout live with the bundled voice + BGM
@@ -55,7 +56,7 @@ The demo loads the bundled episode automatically. Replace any asset, preview the
 
 That's it. Nothing is uploaded; everything runs in your browser.
 
-### Offline render (Python)
+### 🐍 Offline render (Python)
 
 For full-resolution, batch, or CI use:
 
@@ -73,19 +74,19 @@ Tested on Python 3.10+ with Pillow and numpy.
 
 ---
 
-## Features
+## ✨ Features
 
-- **Voice-only waveform** — the spectrum bars follow the speaker's voice, not the BGM underneath. Subtle but it fixes the most common "demo video" tell.
-- **Bilingual subtitles with balanced wrap** — 0.15 s fade in/out, lines auto-balance so no orphan words at the end.
-- **All assets user-supplied** — voice, BGM, image, fonts, SRT are picked via the file chooser. No API keys, no remote calls.
-- **Browser-side record + manual download** — the canvas + audio mix goes straight to MP4 (or WebM if the browser doesn't support MP4 encoding). After recording, a click-to-download link appears; nothing is uploaded.
-- **Inline error reporting** — decoding failures, font load errors, recorder init errors all surface in a red box instead of failing silently.
-- **Responsive layout** — single column on phones, controls on top + stage below. The 1920×1080 canvas preserves aspect ratio at any width.
-- **Bilingual UI** — full `en` + `zh` translation, switcher in the header. Adding a third language is a one-file change.
+- 🎙 **Voice-only waveform** — the spectrum bars follow the speaker's voice, not the BGM underneath. Subtle but it fixes the most common "demo video" tell.
+- 📝 **Bilingual subtitles with balanced wrap** — 0.15 s fade in/out, lines auto-balance so no orphan words at the end.
+- 📂 **All assets user-supplied** — voice, BGM, image, fonts, SRT are picked via the file chooser. No API keys, no remote calls.
+- ⏺ **Browser-side record + manual download** — the canvas + audio mix goes straight to MP4 (or WebM if the browser doesn't support MP4 encoding). After recording, a click-to-download link appears; nothing is uploaded.
+- ⚠️ **Inline error reporting** — decoding failures, font load errors, recorder init errors all surface in a red box instead of failing silently.
+- 📱 **Responsive layout** — single column on phones, controls on top + stage below. The 1920×1080 canvas preserves aspect ratio at any width.
+- 🌐 **Bilingual UI** — full `en` + `zh` translation, switcher in the header. Adding a third language is a one-file change.
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
 The `render.py` offline renderer accepts CLI overrides for every input:
 
@@ -104,7 +105,7 @@ The browser demo's file pickers let you swap each asset individually; no config 
 
 ---
 
-## Repository
+## 📂 Repository
 
 | Path | Purpose |
 |---|---|
@@ -120,7 +121,7 @@ The browser demo's file pickers let you swap each asset individually; no config 
 
 ---
 
-## How it works
+## 🔧 How it works
 
 - The waveform is **pre-analyzed from the voice track only** when voice is loaded. During playback, the canvas reads from a precomputed array, so BGM has no influence.
 - The render pipeline (`render.py`) and the browser demo (`web/`) share identical layout constants, so the live preview matches the final MP4.
@@ -131,7 +132,7 @@ For more detail see [`.claude/skills/slow-english-podcast/SKILL.md`](.claude/ski
 
 ---
 
-## Developer's site (more features)
+## 🛰 Developer's site (more features)
 
 **→ https://www.podxero.com/**
 
@@ -141,7 +142,7 @@ The same project also lives on [podxero.com](https://www.podxero.com/) with **mo
 
 ---
 
-## Internationalization
+## 🌍 Internationalization
 
 The browser demo is fully bilingual. `web/i18n.js` ships `en` + `zh` dictionaries; every visible string in `web/index.html` is wired through a `data-i18n` attribute, and runtime status messages go through `I18N.t(key, …args)`. The language switcher (top-right) saves to `localStorage`, so the choice persists across reloads.
 
@@ -156,16 +157,16 @@ That's the whole change set — no other files need to know about it.
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
 Issues and small patches are welcome. For anything beyond a typo fix, open an issue first so the approach can be agreed on. The render pipeline (`render.py`) and the browser demo (`web/`) **must stay in sync on layout constants** — any change to bar height, subtitle position, or fade duration has to be applied to both code paths and verified against `template/demo.png`.
 
-## Star History
+## ⭐ Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=haituoworkspacebj/slow-english-podcast&type=Date)](https://star-history.com/#haituoworkspacebj/slow-english-podcast&Date)
 
 ---
 
-## License
+## 📄 License
 
 Source: see repository. The font `fonts/AlibabaPuHuiTi-*.otf` (Alibaba PuHuiTi) is free for commercial use under its published license — do **not** substitute PingFang for the rendered video, as it's a macOS system font with ambiguous commercial terms.
