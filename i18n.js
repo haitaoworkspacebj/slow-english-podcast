@@ -64,6 +64,10 @@
       "stage.video": "Video",
       "stage.downloadRecorded": "Download recorded video",
 
+      "foot.note": "Demo runs entirely in your browser. Nothing is uploaded.",
+      "foot.more": "More features (cloud rendering, batch export, library):",
+      "foot.link": "podxero.com (developer's site)",
+
       "status.ready": "Ready: load assets then click Play or Record video",
       "status.analyzing": "Analyzing waveform…",
       "status.playing": "Playing…",
@@ -151,6 +155,10 @@
       "stage.layout": "版式预览（1920×1080）",
       "stage.video": "视频",
       "stage.downloadRecorded": "下载录制的视频",
+
+      "foot.note": "演示完全在浏览器里运行，没有任何上传。",
+      "foot.more": "更多功能（云端渲染、批量导出、素材库）：",
+      "foot.link": "podxero.com（开发者网站）",
 
       "status.ready": "就绪：加载素材后点「播放」或「录制视频」",
       "status.analyzing": "分析声波 …",
