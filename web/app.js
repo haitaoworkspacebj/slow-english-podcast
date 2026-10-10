@@ -79,18 +79,35 @@ function setVideoOverlay(text) {
   }
 }
 
-// Toggle the right-side action buttons between idle and busy.
-// Idle: btnPlay + btnRecord enabled, btnStop disabled.
-// Busy: btnPlay + btnRecord disabled, btnStop enabled.
-function setActionsState(state) {
-  const bar = $("actionsBar");
-  if (!bar) return;
-  const busy = state !== "idle";
-  bar.classList.toggle("is-busy", busy);
+// ---------- action availability + global busy lock ----------
+//
+// One source of truth: syncActionButtons(busy). It sets Play / Record /
+// Stop disabled state + actionsBar.is-busy class, given the current busy
+// flag and content availability. Called from both content changes
+// (updateActionAvailability) and busy transitions (setGlobalLoading).
+//
+// Play / Record are disabled if EITHER busy (file load / preview /
+// recording) OR no content (no voice and no BGM loaded).
+// Stop is enabled iff busy (it must cancel the in-flight op).
+
+function syncActionButtons(busy) {
+  const hasContent = !!(S.voice || S.bgm);
   const play = $("btnPlay"), stop = $("btnStop"), rec = $("btnRecord");
-  if (play) play.disabled = busy;
-  if (rec)  rec.disabled = busy;
+  const disable = busy || !hasContent;
+  if (play) play.disabled = disable;
+  if (rec)  rec.disabled = disable;
   if (stop) stop.disabled = !busy;
+  const bar = $("actionsBar");
+  if (bar) bar.classList.toggle("is-busy", !!busy);
+}
+
+function setActionsState(state) {
+  // legacy entry — kept so the rest of the file still compiles.
+  syncActionButtons(state !== "idle");
+}
+
+function updateActionAvailability() {
+  syncActionButtons(_globalBusy > 0);
 }
 
 // Global busy: locks the whole page (body.app-busy) so the user can't
@@ -100,6 +117,7 @@ let _globalBusy = 0;
 function setGlobalLoading(on) {
   _globalBusy = on ? _globalBusy + 1 : Math.max(0, _globalBusy - 1);
   document.body.classList.toggle("app-busy", _globalBusy > 0);
+  syncActionButtons(_globalBusy > 0);
 }
 window.addEventListener("error", (e) => showError(`${e.message || e}`));
 window.addEventListener("unhandledrejection", (e) => showError(`${(e.reason && e.reason.message) || e.reason || e}`));
@@ -1149,9 +1167,6 @@ $("btnSave").addEventListener("click", async () => { showError(""); await saveAl
 $("btnClearAll").addEventListener("click", async () => { showError(""); await clearAll(); });
 
 const infoTip = $("infoTip");
-if (infoTip) {
-  infoTip.setAttribute("data-tip", t("tip.aboutSaving"));
-  infoTip.setAttribute("data-tip-i18n", "tip.aboutSaving");
-}
+if (infoTip) infoTip.setAttribute("data-tip-i18n", "tip.aboutSaving");
 
 bootApp();
