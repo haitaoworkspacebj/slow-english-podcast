@@ -475,7 +475,7 @@ const CLEAR = {
 const DEFAULTS = [
   ["fontMain", ["fonts/AlibabaPuHuiTi-Bold.otf", "../fonts/AlibabaPuHuiTi-Bold.otf"]],
   ["fontTag", ["fonts/AlibabaPuHuiTi-Regular.otf", "../fonts/AlibabaPuHuiTi-Regular.otf"]],
-  ["imgLeft", ["assets/Podcaster.webp", "../assets/Podcaster.webp"]],
+  ["imgLeft", ["Podcaster.webp", "assets/Podcaster.webp", "../assets/Podcaster.webp"]],
   ["srt", ["subtitles/bilingual.srt", "../subtitles/bilingual.srt"]],
   ["bgm", ["assets/bgm.mp3", "../assets/bgm.mp3"]],
   ["voice", ["assets/slow_english.mp3", "../assets/slow_english.mp3"]],
