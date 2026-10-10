@@ -1,28 +1,106 @@
 # 慢速英语播客视频 · Slow English Podcast
 
-用人声录音和英文字幕，自动翻译成中英双语字幕、混入 BGM，按 demo 版式渲染 1080p 视频（左下角小人、人声驱动声波、双语字幕、标语）。同时提供 Python 离线渲染器和纯静态浏览器 demo。
+**用人声录音和英文字幕，自动翻译成中英双语字幕、混入 BGM，按 demo 版式渲染 1080p 视频——直接在浏览器里完成。**
 
 > English version: [README.md](./README.md)
 
-## 预览（30 秒样片）
+[![Live demo](https://img.shields.io/badge/demo-在线-blue?style=flat-square)](https://haituoworkspacebj.github.io/slow-english-podcast/)
+[![License](https://img.shields.io/badge/license-见仓库-lightgrey?style=flat-square)](#字体授权)
+[![Languages](https://img.shields.io/badge/i18n-中%20%7C%20英-success?style=flat-square)](#国际化)
+[![Deploy](https://img.shields.io/badge/部署-GitHub%20Pages-222?style=flat-square)](https://haituoworkspacebj.github.io/slow-english-podcast/)
 
-![Demo video](media/slow_english_demo.mp4)
+---
 
-样片由仓库自带的 `assets/slow_english.mp3` + `assets/bgm.mp3` + `assets/Podcaster.webp` 加双语 SRT 渲染而成。**声波只跟随人声跳动，不受 BGM 影响**。
+## 演示
 
-## 在线 demo
+![30 秒样片](media/slow_english_demo.mp4)
 
-**https://haituoworkspacebj.github.io/slow-english-podcast/**
+> 30 秒真实渲染片段：中英双语字幕、人声驱动声波、BGM 衬底。
 
-完全在浏览器里运行——不上传，不需服务器。选人声 / BGM / 图片 / 字体 / SRT（或用 EdgeTTS 直接合成人声），实时预览版式后，把画布 + 混音录成 MP4 / WebM。首次打开会自动载入默认素材。页面**默认英文**，右上角下拉可切中文。
+### 立即试用
 
-## 开发者网站（后台功能更全）
+**→ https://haituoworkspacebj.github.io/slow-english-podcast/**
 
-**https://www.podxero.com/**
+打开后自动加载默认一集。替换素材 → 预览版式 → 录制画布和混音（MP4 / WebM）。默认显示英文，右上角下拉可切中文。
 
-本项目也在开发者的自有网站 [podxero.com](https://www.podxero.com/) 上线，那里提供更多后台能力：**云端渲染队列、批量导出、长视频流水线、素材库管理**。需要全功能版本请访问 [podxero.com](https://www.podxero.com/)。
+### 截图
 
-> GitHub 仓库和 `haituoworkspacebj.github.io` 上的 demo 仅作展示。浏览器里录的视频默认留在本地，不会上传。
+| 桌面 | 手机 |
+|---|---|
+| ![桌面视图](media/screenshot-desktop.png) | ![手机视图](media/screenshot-mobile.png) |
+
+---
+
+## 目录
+
+- [快速开始](#快速开始)
+- [特性](#特性)
+- [配置](#配置)
+- [仓库结构](#仓库结构)
+- [工作原理](#工作原理)
+- [国际化](#国际化)
+- [字体授权](#字体授权)
+
+---
+
+## 快速开始
+
+### 浏览器 demo（免安装）
+
+1. 打开 https://haituoworkspacebj.github.io/slow-english-podcast/
+2. 点 **▶ Play** 预览默认一集（自动加载）
+3. 替换任一项素材：人声 / BGM / 小人图 / 字体 / SRT
+4. 点 **● Record video** 把画布 + 混音录成 MP4 / WebM
+
+完事。整个过程不上传任何东西，全部在浏览器里跑。
+
+### 离线渲染（Python）
+
+想要全分辨率、批量、或者 CI 用：
+
+```bash
+git clone https://github.com/haitaoworkspacebj/slow-english-podcast.git
+cd slow-english-podcast
+python3 -m pip install pillow numpy
+python3 make_bilingual_srt.py                # 合并英文字幕时间轴 + 中文翻译
+python3 render.py video                      # 整片 → output/slow_english.mp4
+python3 render.py preview 78.3               # 单帧 → output/preview.png
+python3 render.py video --start 70 --duration 20 -o output/test.mp4   # 片段
+```
+
+已在 Python 3.10+ 配 Pillow / numpy 测试通过。
+
+---
+
+## 特性
+
+- **声波只跟人声走** — 频谱条跟随说话者，不被 BGM 干扰。细节但消除"演示视频"最常见的破绽
+- **双语字幕自动换行** — 0.15 秒淡入淡出，两行长度均衡，不留孤儿词
+- **浏览器原生 TTS** — 微软 EdgeTTS（300+ 免费在线音色）或浏览器自带语音合成，无需 API key
+- **一键录屏** — 画布 + 混音直接出 MP4（浏览器不支持则降级 WebM），没有服务端中转
+- **响应式布局** — 手机单列、控件在上/舞台在下；1920×1080 canvas 在所有宽度下保持 16:9
+- **中英双语 UI** — 顶部语言切换；扩展第三语言只需改一个文件
+
+---
+
+## 配置
+
+`render.py` 离线渲染器每个素材都支持命令行覆盖：
+
+```bash
+python3 render.py video \
+  --voice   assets/voice.mp3 \
+  --bgm     assets/bgm.mp3        # 或 "none"
+  --srt     subtitles/bilingual.srt \
+  --podcaster assets/Podcaster.webp \
+  --font    fonts/AlibabaPuHuiTi-Bold.otf \
+  --font-tag fonts/AlibabaPuHuiTi-Regular.otf \
+  --tagline "——这样建立你的英语脑——"
+```
+
+浏览器 demo 通过文件选择按钮逐项替换素材，无需配置文件。
+
+---
 
 ## 仓库结构
 
@@ -30,24 +108,51 @@
 |---|---|
 | `web/` | 浏览器 demo 源码（HTML、CSS、JS、i18n） |
 | `dist/` | 构建产物静态资源——发布到 GitHub Pages |
+| `media/` | README 里用的样片和截图 |
 | `assets/` | 样片素材：人声、BGM、小人图、源 SRT |
 | `fonts/` | 正文字体 / 标语字体（阿里巴巴普惠体、Montserrat） |
 | `subtitles/` | 双语 SRT + 中文翻译源文件 |
 | `template/` | 版式参考 PNG |
 | `render.py` | 离线渲染器（Python + Pillow + numpy） |
-| `make_bilingual_srt.py` | 把英文字幕时间轴与中文翻译合并成双语 SRT |
+| `make_bilingual_srt.py` | 把英文字幕时间轴与中文翻译合并 |
+
+---
 
 ## 工作原理
 
-- **声波只跟人声走**——加 BGM 不会改变声波图样
-- 字幕 0.15 秒淡入淡出；自动换行并保持两行长度均衡，避免单字孤儿行
-- `render.py` 离线渲染器和 `web/` 浏览器 demo 共用同一套版式常量，预览与成片完全一致
-- 所有默认素材都已打包到 `dist/` 根目录，GitHub Pages 直接可用，不需要源码树
+- **声波在人声加载时预分析**——`S.levels` 一次性算好。播放时画布直接查表，BGM 在 audio graph 里跑，跟声波无关
+- `render.py` 离线渲染和 `web/` 浏览器 demo 共用同一套版式常量，预览与成片完全一致
+- 所有默认素材（图片、字体、人声、BGM、SRT）都已打包到 `dist/` 根目录，GitHub Pages 直接可用
+- 浏览器 demo 用 `MediaRecorder` 直接录画布和混音，没有上传服务端
+
+更多细节见 [`.claude/skills/slow-english-podcast/SKILL.md`](.claude/skills/slow-english-podcast/SKILL.md)——这是 Claude Code 在这个项目里用的工作手册。
+
+---
+
+## 开发者网站（后台功能更全）
+
+**→ https://www.podxero.com/**
+
+本项目也在开发者的自有网站 [podxero.com](https://www.podxero.com/) 上线，那里提供更多后台能力：**云端渲染队列、批量导出、长视频流水线、素材库管理**。需要全功能版本请访问 [podxero.com](https://www.podxero.com/)。
+
+> GitHub 仓库和 `haituoworkspacebj.github.io` 上的 demo 仅作展示。浏览器里录的视频默认留在本地，不会上传。
+
+---
 
 ## 国际化
 
-`web/i18n.js` 收录了英文 + 中文两套文案；`web/index.html` 上所有可见文字都接 `data-i18n` 属性。语言切换器在页面右上角，记忆在 `localStorage` 里，刷新保留。添加新语言只要往 `i18n.js` 的 `STRINGS` 字典加一组即可。
+浏览器 demo 完整支持双语。`web/i18n.js` 收录 `en` + `zh` 字典；`web/index.html` 上每个可见文字都接 `data-i18n` 属性，运行时状态走 `I18N.t(key, …args)`。顶部切换器记忆在 `localStorage`，刷新保留。
+
+**新增语言**（比如日语）只要三步：
+
+1. 在 `web/i18n.js` 的 `STRINGS` 加一列 `ja`，按 `en` 的形状对齐
+2. 在 `web/index.html` 的 `#langSwitch` 下拉里加 `<option value="ja">日本語</option>`
+3. （可选）在 `current` 初始化块里加 navigator-language 兜底
+
+重新压缩 `dist/i18n.js` 和 `dist/index.html`、重新部署即可，其他文件不用动。
+
+---
 
 ## 字体授权
 
-`fonts/AlibabaPuHuiTi-*.otf` 阿里巴巴普惠体可免费商用。**不要用 PingFang** 做最终视频字体——它是 macOS 系统字体，授权不明确。
+`fonts/AlibabaPuHuiTi-*.otf` 阿里巴巴普惠体可免费商用。**不要用 PingFang** 做最终视频字体——它是 macOS 系统字体，商用授权不明确。
