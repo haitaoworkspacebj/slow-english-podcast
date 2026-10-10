@@ -86,6 +86,10 @@
           <span class="sublang">中</span>
           <input type="text" id="zhText" value="这就是建立你“英语脑”的方式">
         </div>
+        <p id="demoNote" class="demo-note" hidden>
+          <span id="demoNoteText">SRT active — demo text above is ignored. </span>
+          <button id="demoNoteClear" type="button" class="demo-note-clear" data-i18n="file.demoNoteClear">Clear SRT</button>
+        </p>
       </div>
 
       <div class="actions">
@@ -103,10 +107,8 @@
     <section class="stage">
       <div class="panel">
         <h2 data-i18n="stage.video">Video</h2>
-        <video id="player" controls playsinline preload="metadata">
-          <source src="slow_english_demo.mp4" type="video/mp4">
-        </video>
-        <p class="hint" data-i18n="stage.previewHint">This is a 30-second sample render. Click Generate video to record your own with the loaded assets.</p>
+        <video id="player" controls playsinline preload="metadata"></video>
+        <p class="hint" data-i18n="stage.previewHint">Your recorded video will appear here. Click Generate preview to scrub through the layout, or Generate video to record and download an MP4 / WebM.</p>
       </div>
     </section>
   </main>
@@ -120,7 +122,7 @@
   </footer>
 
   <input type="file" id="fileInput" hidden>
-  <canvas id="canvas" width="1920" height="1080" hidden></canvas>
+  <canvas id="canvas" width="1920" height="1080"></canvas>
 
   <script src="i18n.js"></script>
   <script src="app.js"></script>
