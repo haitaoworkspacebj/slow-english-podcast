@@ -13,9 +13,9 @@
 
 ## 🎬 演示
 
-![30 秒样片](media/slow_english_demo.mp4)
+<a target="_blank" rel="noopener noreferrer" href="media/slow_english_demo.mp4"><img src="media/slow_english_demo.jpg" alt="30 秒样片——点击下载 / 播放" style="max-width: 100%; border-radius: 8px;"></a>
 
-> 30 秒真实渲染片段：中英双语字幕、人声驱动声波、BGM 衬底。
+> 30 秒真实渲染片段：中英双语字幕、人声驱动声波、BGM 衬底。点击图片下载 / 播放 MP4。
 
 ### 立即试用
 

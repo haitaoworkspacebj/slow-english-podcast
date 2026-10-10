@@ -13,9 +13,9 @@
 
 ## 🎬 Demo
 
-![30-second demo video](media/slow_english_demo.mp4)
+<a target="_blank" rel="noopener noreferrer" href="media/slow_english_demo.mp4"><img src="media/slow_english_demo.jpg" alt="30-second demo video — click to download / play" style="max-width: 100%; border-radius: 8px;"></a>
 
-> 30 seconds from a real render: bilingual subtitles, voice-driven waveform, and BGM underneath.
+> 30 seconds from a real render: bilingual subtitles, voice-driven waveform, and BGM underneath. Click the frame to download / play the MP4.
 
 ### Try it now
 
