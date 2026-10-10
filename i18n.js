@@ -278,6 +278,12 @@
     document.querySelectorAll("[data-i18n-value]").forEach((el) => {
       el.setAttribute("value", t(el.dataset.i18nValue));
     });
+    // Resolve data-tip-i18n="tip.xxx" → data-tip="translated text" so the
+    // CSS `content: attr(data-tip)` hover tooltip shows the localized string.
+    document.querySelectorAll("[data-tip-i18n]").forEach((el) => {
+      const key = el.dataset.tipI18n;
+      if (key) el.setAttribute("data-tip", t(key));
+    });
   }
 
   window.I18N = { t, setLang, getLang, applyTranslations, LANGUAGES: Object.keys(STRINGS) };
