@@ -107,8 +107,13 @@ def bar_levels(samples):
 
     half = N_BARS // 2 + 1                    # bands for center + one side
     edges = np.geomspace(90, 5000, half + 1)
-    bands = np.stack([spec[:, (freqs >= lo) & (freqs < hi)].mean(axis=1)
-                      for lo, hi in zip(edges[:-1], edges[1:])], axis=1)
+    # nanmean guards against empty frequency bins (returns nan → we then
+    # treat it as silence downstream), so a degenerate band never crashes
+    # the renderer or pollutes the loudness normalization.
+    with np.errstate(invalid="ignore"):
+        bands = np.stack([np.nanmean(spec[:, (freqs >= lo) & (freqs < hi)], axis=1)
+                          for lo, hi in zip(edges[:-1], edges[1:])], axis=1)
+    bands = np.nan_to_num(bands, nan=0.0)
     db = 20 * np.log10(bands + 1e-9)
     top = np.percentile(db, 99)
     lv = np.clip((db - (top - 45)) / 45, 0, 1) ** 1.6
@@ -134,8 +139,19 @@ def parse_srt(path):
     cues = []
     for block in re.split(r"\n\s*\n", path.read_text(encoding="utf-8").strip()):
         lines = block.strip().splitlines()
-        a, b = lines[1].split(" --> ")
-        cues.append((ts(a), ts(b), lines[2], lines[3] if len(lines) > 3 else ""))
+        # Need at least 3 lines: index, timing line, body. Malformed SRT
+        # blocks (e.g. blank lines or stray cue markers) are skipped instead
+        # of crashing the renderer.
+        if len(lines) < 3 or "-->" not in lines[1]:
+            continue
+        try:
+            a, b = lines[1].split(" --> ")
+            start, end = ts(a), ts(b)
+        except (ValueError, IndexError):
+            continue
+        if end <= start:
+            continue
+        cues.append((start, end, lines[2], lines[3] if len(lines) > 3 else ""))
     return cues
 
 
@@ -299,7 +315,13 @@ def render_video(cfg, out, start=0.0, duration=None, progress=None):
     mix = out.parent / "mix.wav"
     print("mixing audio ...")
     report("混音", 0, 1)
-    mix_audio(cfg, mix, total)
+    try:
+        mix_audio(cfg, mix, total)
+    except Exception:
+        # Don't leave a half-written mix.wav behind if ffmpeg rejects the
+        # BGM or fails for any other reason — the next run would re-mix OK.
+        mix.unlink(missing_ok=True)
+        raise
 
     print("analysing voice + caching layers ...")
     report("分析人声 / 缓存字幕层", 0, 1)
