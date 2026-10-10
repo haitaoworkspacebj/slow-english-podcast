@@ -1,6 +1,6 @@
 ---
 name: slow-english-podcast
-description: 制作慢速英语（Slow English）播客视频——给定人声录音和英文字幕，翻译成中英双语字幕，混入 BGM，按 demo 版式渲染 1080p 视频（左下角小人、人声驱动声波、双语字幕、标语）。项目自带纯静态浏览器 demo，可换素材、实时预览、录屏。当用户提到慢速英语、Slow English、播客视频渲染、bilingual SRT、双语字幕、podcast video、video demo，或要求换一集、新增素材、改版式、压缩、部署到 GitHub Pages 时使用。
+description: 制作慢速英语（Slow English）播客视频——给定人声录音和英文字幕，翻译成中英双语字幕，混入 BGM，按 demo 版式渲染 1080p 视频（左下角小人、人声驱动声波、双语字幕、标语）。项目自带纯静态浏览器 demo，所有素材由用户本地选择上传，可实时预览、录屏并下载。当用户提到慢速英语、Slow English、播客视频渲染、bilingual SRT、双语字幕、podcast video、video demo，或要求换一集、新增素材、改版式、压缩、部署到 GitHub Pages 时使用。
 ---
 
 # 慢速英语播客视频
@@ -10,6 +10,8 @@ description: 制作慢速英语（Slow English）播客视频——给定人声�
 > **怎么显式调用**：在 Claude Code 里输入 `/slow-english-podcast`（目录名 = frontmatter 的 `name`）。
 >
 > **给人类看的说明**：见 [`README.md`](./README.md)。
+>
+> **架构基线（v2 起）**：浏览器 demo **不再包含 TTS 面板**。所有 voice / BGM / 图片 / 字体 都由用户通过文件选择器上传；默认素材（来自 `dist/` 根的 `slow_english.mp3`、`bgm.mp3`、`Podcaster.webp`、两个 otf、`bilingual.srt`）会在页面打开时自动加载。页面有 `errorBox` 暴露解码 / 加载 / 录制错误，不要静默吞掉。
 
 ## 流程
 
@@ -26,8 +28,9 @@ description: 制作慢速英语（Slow English）播客视频——给定人声�
 
 - 换左下角图片（可调高度 100–800px）、换正文字体 / 标语字体（支持 .otf/.ttf）、换人声录音、换 BGM（可无）
 - 加载 SRT 后按时间轴显示字幕；不加载就用页面上的演示文本
-- 「播放」= 人声 + BGM 混音播放，canvas 同步动效（声波随人声起伏、字幕 0.15 秒淡入淡出）
-- 「录制视频」= 把画布和混音实时录成 mp4（不支持时录 webm），完成后页面内播放、可下载
+- 「Generate preview」= 人声 + BGM 混音播放，canvas 同步动效（声波随人声起伏、字幕 0.15 秒淡入淡出），音轨自然结束或点 Stop 后状态回到「Stopped」
+- 「Generate video」= 把画布和混音实时录成 mp4（不支持时录 webm），**不自动下载**，完成后页面下方出现「↓ Download video」链接，点击才下载带时间戳的文件
+- 任何加载 / 解码 / 录制错误写到 `#errorBox`（红色框），不要静默吞
 - 页面里的版式参数与 render.py 保持一致；成片仍用命令行渲染（整片质量和时长更可控）
 
 ## 素材约定

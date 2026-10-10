@@ -21,7 +21,7 @@
 
 **→ https://haituoworkspacebj.github.io/slow-english-podcast/**
 
-The demo loads the bundled episode automatically. Replace any asset, preview the layout, then record the canvas + audio mix as MP4 / WebM. Defaults to English; switch to Chinese at the top right.
+The demo loads the bundled episode automatically. Replace any asset, preview the layout live, then click **Generate video** to record the canvas + audio mix and download the file. No upload, no server, no TTS — voice and BGM are user-supplied (defaults are pre-loaded from the bundled assets).
 
 ### Screenshots
 
@@ -49,9 +49,9 @@ The demo loads the bundled episode automatically. Replace any asset, preview the
 ### Browser demo (no install)
 
 1. Open https://haituoworkspacebj.github.io/slow-english-podcast/
-2. Click **▶ Play** to preview the bundled episode (defaults load automatically)
-3. Swap any of: voice, BGM, podcaster image, fonts, SRT
-4. Click **● Record video** to save the canvas + audio mix as MP4 / WebM
+2. Click **▶ Generate preview** to render the layout live with the bundled voice + BGM
+3. Swap any of: voice, BGM, podcaster image, fonts, SRT (file picker on the left)
+4. Click **● Generate video** to record the canvas + audio mix; when it finishes, click the **↓ Download video** link that appears below the progress bar
 
 That's it. Nothing is uploaded; everything runs in your browser.
 
@@ -77,8 +77,9 @@ Tested on Python 3.10+ with Pillow and numpy.
 
 - **Voice-only waveform** — the spectrum bars follow the speaker's voice, not the BGM underneath. Subtle but it fixes the most common "demo video" tell.
 - **Bilingual subtitles with balanced wrap** — 0.15 s fade in/out, lines auto-balance so no orphan words at the end.
-- **Browser-native TTS** — Microsoft EdgeTTS (300+ voices, free, online) or the browser's built-in speech. No API key.
-- **One-click record** — the canvas + audio mix goes straight to MP4 (or WebM if the browser doesn't support MP4 encoding). No server round-trip.
+- **All assets user-supplied** — voice, BGM, image, fonts, SRT are picked via the file chooser. No API keys, no remote calls.
+- **Browser-side record + manual download** — the canvas + audio mix goes straight to MP4 (or WebM if the browser doesn't support MP4 encoding). After recording, a click-to-download link appears; nothing is uploaded.
+- **Inline error reporting** — decoding failures, font load errors, recorder init errors all surface in a red box instead of failing silently.
 - **Responsive layout** — single column on phones, controls on top + stage below. The 1920×1080 canvas preserves aspect ratio at any width.
 - **Bilingual UI** — full `en` + `zh` translation, switcher in the header. Adding a third language is a one-file change.
 
