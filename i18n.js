@@ -29,6 +29,7 @@
       "btn.stop": "■ Stop",
       "btn.record": "● Generate video",
 
+      "tagline": "—— Build your English brain ——",
       "stage.video": "Video",
       "stage.previewHint": "This is a 30-second sample render. Click Generate video to record your own with the loaded assets.",
 
@@ -100,6 +101,7 @@
       "btn.stop": "■ 停止",
       "btn.record": "● 生成视频",
 
+      "tagline": "—— 这样建立你的英语脑 ——",
       "stage.video": "视频",
       "stage.previewHint": "这是 30 秒样片。点击 Generate video 用当前素材录制你自己的版本。",
 
