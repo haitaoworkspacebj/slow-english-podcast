@@ -8,11 +8,16 @@ __pycache__/
 .DS_Store
 
 # Agent / runtime state (本地工具链痕迹，不进仓库)
-.claude/
+.claude/settings.local.json
+.claude/skills/*/.gitkeep
 .v2c/
 .video_agent/
 .zcode/
 .zcodeignore
+# 但 skill 定义本身（SKILL.md + skill README）是项目文档，要随仓库走
+!.claude/skills/
+!.claude/skills/**/SKILL.md
+!.claude/skills/**/README.md
 
 # Build / render artifacts
 dist/

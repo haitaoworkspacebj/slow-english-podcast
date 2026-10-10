@@ -39,6 +39,7 @@ The demo loads the bundled episode automatically. Replace any asset, preview the
 - [Repository](#repository)
 - [How it works](#how-it-works)
 - [Internationalization](#internationalization)
+- [Contributing](#contributing)
 - [License](#license)
 
 ---
@@ -151,6 +152,16 @@ The browser demo is fully bilingual. `web/i18n.js` ships `en` + `zh` dictionarie
 4. Re-minify `dist/i18n.js` and `dist/index.html`, redeploy.
 
 That's the whole change set — no other files need to know about it.
+
+---
+
+## Contributing
+
+Issues and small patches are welcome. For anything beyond a typo fix, open an issue first so the approach can be agreed on. The render pipeline (`render.py`) and the browser demo (`web/`) **must stay in sync on layout constants** — any change to bar height, subtitle position, or fade duration has to be applied to both code paths and verified against `template/demo.png`.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=haituoworkspacebj/slow-english-podcast&type=Date)](https://star-history.com/#haituoworkspacebj/slow-english-podcast&Date)
 
 ---
 

@@ -39,6 +39,7 @@
 - [仓库结构](#仓库结构)
 - [工作原理](#工作原理)
 - [国际化](#国际化)
+- [参与贡献](#参与贡献)
 - [字体授权](#字体授权)
 
 ---
@@ -150,6 +151,16 @@ python3 render.py video \
 3. （可选）在 `current` 初始化块里加 navigator-language 兜底
 
 重新压缩 `dist/i18n.js` 和 `dist/index.html`、重新部署即可，其他文件不用动。
+
+---
+
+## 参与贡献
+
+欢迎提 Issue 和小补丁。除错别字以外的改动，请先开个 Issue 对齐方案。`render.py` 离线渲染和 `web/` 浏览器 demo **必须保持版式常量同步**——任何对条形高度、字幕位置、淡入淡出时长的改动都要同步两路，并以 `template/demo.png` 作为参照。
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=haituoworkspacebj/slow-english-podcast&type=Date)](https://star-history.com/#haituoworkspacebj/slow-english-podcast&Date)
 
 ---
 
