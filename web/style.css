@@ -227,6 +227,18 @@ button.clear {
   background: var(--video-bg);
 }
 
+.panel video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  background: var(--video-bg);
+  object-fit: contain;
+}
+
+#canvas[hidden] { display: none !important; }
+
 /* ---------- footer ---------- */
 
 .site-foot {

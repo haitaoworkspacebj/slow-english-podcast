@@ -18,7 +18,7 @@
         </select>
       </label>
     </div>
-    <p data-i18n="header.subtitle">Pick a voice and BGM (or stick with the bundled defaults), preview the layout, then click Generate video to record and download an MP4 / WebM. Everything runs locally in your browser — no upload, no server.</p>
+    <p data-i18n="header.subtitle">Pick a voice and BGM (defaults are pre-loaded), then click Generate video to record the rendered output and download it. Everything runs locally in your browser.</p>
   </header>
 
   <main>
@@ -82,21 +82,13 @@
         <input type="text" id="zhText" value="这就是建立你“英语脑”的方式">
       </div>
 
-      <div class="field">
-        <label data-i18n="file.recDuration">Recording duration (seconds, 0 = full)</label>
-        <div class="row">
-          <input type="number" id="recSeconds" value="10" min="0" step="1">
-          <span class="hint" id="recHint" data-i18n="file.recHint">Recording runs in real time</span>
-        </div>
-      </div>
-
       <div class="actions">
         <button id="btnPlay" class="primary" data-i18n="btn.play">▶ Generate preview</button>
         <button id="btnStop" data-i18n="btn.stop">■ Stop</button>
         <button id="btnRecord" data-i18n="btn.record">● Generate video</button>
       </div>
 
-      <div id="status" data-i18n="status.ready">Ready: load assets then click Generate preview or Generate video</div>
+      <div id="status" data-i18n="status.ready">Ready: load assets then click Generate video</div>
       <div class="progress"><div id="bar"></div></div>
       <p class="download-row"><a id="downloadLink" hidden data-i18n="download.link">↓ Download video</a></p>
       <div id="errorBox" hidden></div>
@@ -104,8 +96,11 @@
 
     <section class="stage">
       <div class="panel">
-        <h2 data-i18n="stage.layout">Layout preview (1920×1080)</h2>
-        <canvas id="canvas" width="1920" height="1080"></canvas>
+        <h2 data-i18n="stage.video">Video</h2>
+        <video id="player" controls playsinline preload="metadata">
+          <source src="slow_english_demo.mp4" type="video/mp4">
+        </video>
+        <p class="hint" data-i18n="stage.previewHint">This is a 30-second sample render. Click Generate video to record your own with the loaded assets.</p>
       </div>
     </section>
   </main>
@@ -119,6 +114,8 @@
   </footer>
 
   <input type="file" id="fileInput" hidden>
+  <canvas id="canvas" width="1920" height="1080" hidden></canvas>
+
   <script src="i18n.js"></script>
   <script src="app.js"></script>
   <script>

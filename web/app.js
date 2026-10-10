@@ -1,6 +1,7 @@
 /* Slow English Podcast · static demo — layout constants kept in sync with render.py.
-   No TTS: voice and BGM are uploaded by the user (or auto-loaded from bundled defaults).
-   Generate preview = real-time render; Generate video = record canvas + audio mix, then auto-download. */
+   Right side: single <video> element with native browser controls.
+   Default src is the bundled demo. Generate video records an offscreen canvas + audio
+   mix, then swaps the video src to the recorded blob and shows a download link. */
 const t = (key, ...args) => window.I18N ? window.I18N.t(key, ...args) : key;
 
 const W = 1920, H = 1080, FPS = 30;
@@ -15,6 +16,7 @@ const ACCEPT = { voice: "audio/*", bgm: "audio/*", imgLeft: "image/*", srt: ".sr
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("canvas");
+const video = $("player");
 const ctx = canvas.getContext("2d");
 const base = document.createElement("canvas");
 base.width = W; base.height = H;
@@ -27,6 +29,7 @@ const S = {
   cues: [], srtName: "",
   levels: null,
   playing: false,
+  lastBlob: null, lastUrl: null,
 };
 
 function setStatus(text) { $("status").textContent = text; }
@@ -40,8 +43,6 @@ function showError(msg) {
 }
 window.addEventListener("error", (e) => showError(`${e.message || e}`));
 window.addEventListener("unhandledrejection", (e) => showError(`${(e.reason && e.reason.message) || e.reason || e}`));
-
-// ---------- 文字 ----------
 
 function fontStr(size, family) {
   return `bold ${size}px ${family ? `"${family}", ` : ""}sans-serif`;
@@ -81,8 +82,6 @@ function drawCentered(c, text, font, size, cy, color) {
   lines.forEach((line, i) => c.fillText(line, W / 2, top + lh * (i + 0.5)));
 }
 
-// ---------- 图片 ----------
-
 async function cropAlpha(bitmap) {
   const cv = new OffscreenCanvas(bitmap.width, bitmap.height);
   const cx = cv.getContext("2d");
@@ -114,8 +113,6 @@ function rebuildBase() {
   if (S.imgLeft) drawPodcaster(baseCtx, S.imgLeft, S.imgLeftH);
   drawCentered(baseCtx, TAGLINE, `400 ${SIZE_TAG}px ${S.fontTag ? `"${S.fontTag}", ` : ""}sans-serif`, SIZE_TAG, Y_TAG, GRAY);
 }
-
-// ---------- 声波（与 render.py 的 bar_levels 同算法，仅跟随人声，不受 BGM 影响） ----------
 
 function fft(re, im) {
   const n = re.length;
@@ -231,8 +228,6 @@ function drawWave(c, levels) {
   }
 }
 
-// ---------- 字幕 ----------
-
 function cueAt(t) {
   if (!S.cues.length) {
     return { en: $("enText").value.trim(), zh: $("zhText").value.trim(), alpha: 1 };
@@ -268,9 +263,7 @@ function drawFrame(t) {
   }
 }
 
-// ---------- 播放 / 录制 ----------
-
-let audioCtx = null, nodes = [], playStart = 0, rafId = 0, tickTimer = 0, recorder = null, recChunks = [], recStopAt = 0;
+let audioCtx = null, nodes = [], playStart = 0, rafId = 0, tickTimer = 0, recorder = null, recChunks = [], recStopAt = 0, destForRec = null;
 
 function ensureCtx() {
   if (!audioCtx) audioCtx = new AudioContext();
@@ -285,139 +278,17 @@ function stopPlayback() {
   cancelAnimationFrame(rafId);
   clearInterval(tickTimer);
   if (recorder && recorder.state === "recording") recorder.stop();
-  // After voice naturally ends, status doesn't auto-update because the rAF loop
-  // stops scheduling itself. Set it explicitly so the UI doesn't stick on "Playing…".
   if (!recorder || recorder.state !== "recording") {
     setStatus(t("status.stopped"));
   }
 }
 
-function play() {
+function playWithDest(dest, mode /* "preview" | "record" */) {
   stopPlayback();
   const ac = ensureCtx();
   const master = ac.createGain();
   master.connect(ac.destination);
-
-  playStart = ac.currentTime + 0.05;
-  let endAt = playStart + 30;
-  if (S.voice) {
-    const v = ac.createBufferSource();
-    v.buffer = S.voice;
-    v.connect(master);
-    v.start(playStart);
-    v.onended = () => { if (!recorder || recorder.state !== "recording") stopPlayback(); };
-    nodes.push(v);
-    endAt = playStart + S.voice.duration;
-  }
-  if (S.bgm) {
-    const b = ac.createBufferSource();
-    b.buffer = S.bgm;
-    b.loop = true;
-    const g = ac.createGain();
-    b.connect(g).connect(master);
-    b.start(playStart);
-    b.stop(endAt);
-    const fadeStart = Math.max(playStart, endAt - BGM_FADE);
-    g.gain.setValueAtTime(1, fadeStart);
-    g.gain.linearRampToValueAtTime(0, endAt);
-    nodes.push(b);
-  }
-  S.playing = true;
-  setStatus(t("status.playing"));
-  let lastDraw = 0;
-  const step = () => {
-    lastDraw = performance.now();
-    const cur = audioCtx.currentTime - playStart;
-    drawFrame(Math.max(0, cur));
-    if (!S.playing && (!recorder || recorder.state !== "recording")) setStatus(t("status.stopped"));
-  };
-  const tick = () => {
-    step();
-    if (S.playing) rafId = requestAnimationFrame(tick);
-  };
-  rafId = requestAnimationFrame(tick);
-  tickTimer = setInterval(() => {
-    if (S.playing && performance.now() - lastDraw > 120) step();
-  }, 33);
-}
-
-function refreshDownloadLink() {
-  const a = $("downloadLink");
-  if (!a) return;
-  if (S.lastBlob && S.lastUrl) {
-    const ext = (S.lastBlob.type || "").includes("mp4") ? "mp4" : "webm";
-    a.href = S.lastUrl;
-    a.download = `slow_english_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.${ext}`;
-    a.hidden = false;
-  } else {
-    a.removeAttribute("href");
-    a.removeAttribute("download");
-    a.hidden = true;
-  }
-}
-
-function pickMime() {
-  const cands = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4",
-    "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
-  for (const m of cands) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
-  return "";
-}
-
-function record() {
-  if (!window.MediaRecorder) { showError(t("error.noMediaRecorder")); return; }
-  if (!S.voice && !S.bgm) { showError(t("error.nothingToRecord")); return; }
-  // Clear any previous recording result before starting a new one
-  if (S.lastUrl) { URL.revokeObjectURL(S.lastUrl); }
-  S.lastBlob = null;
-  S.lastUrl = null;
-  refreshDownloadLink();
-  stopPlayback();
-  setProgress(0);
-  showError("");
-  const ac = ensureCtx();
-  // MediaStreamDestination so the recorder grabs the mixed audio
-  const dest = ac.createMediaStreamDestination();
-  ac.createGain(); // touch master chain
-  playWithDest(dest);
-
-  const stream = new MediaStream([
-    ...canvas.captureStream(FPS).getVideoTracks(),
-    ...dest.stream.getAudioTracks(),
-  ]);
-  const mime = pickMime();
-  try {
-    recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
-  } catch (err) {
-    showError(`${t("error.recorderInit")}: ${err.message}`);
-    return;
-  }
-  recChunks = [];
-  recorder.ondataavailable = (e) => { if (e.data.size) recChunks.push(e.data); };
-  recorder.onstop = () => {
-    const type = (recorder.mimeType || "video/webm").split(";")[0];
-    const blob = new Blob(recChunks, { type });
-    const ext = type.includes("mp4") ? "mp4" : "webm";
-    S.lastBlob = blob;
-    S.lastUrl = URL.createObjectURL(blob);
-    setProgress(1);
-    recorder = null;
-    setStatus(t("status.recordDone"));
-    refreshDownloadLink();
-  };
-  const want = +$("recSeconds").value;
-  const full = S.voice ? S.voice.duration : 30;
-  recStopAt = want > 0 ? Math.min(want, full) : full;
-  recorder.start();
-  setStatus(t("status.recording", Math.round(recStopAt)));
-}
-
-function playWithDest(dest) {
-  // play() that pipes to a MediaStreamDestination for recording (in addition to speakers)
-  stopPlayback();
-  const ac = ensureCtx();
-  const master = ac.createGain();
-  master.connect(ac.destination);
-  master.connect(dest);
+  if (dest) master.connect(dest);
 
   playStart = ac.currentTime + 0.05;
   let endAt = playStart + 30;
@@ -444,13 +315,15 @@ function playWithDest(dest) {
     nodes.push(b);
   }
   S.playing = true;
-  setStatus(t("status.recording", Math.round(endAt - playStart)));
+  setStatus(mode === "record"
+    ? t("status.recording", Math.round(endAt - playStart))
+    : t("status.playing"));
   let lastDraw = 0;
   const step = () => {
     lastDraw = performance.now();
     const cur = audioCtx.currentTime - playStart;
     drawFrame(Math.max(0, cur));
-    if (recorder && recorder.state === "recording") {
+    if (mode === "record" && recorder && recorder.state === "recording") {
       setProgress(Math.min(1, cur / recStopAt));
       if (cur >= recStopAt) stopPlayback();
     }
@@ -465,7 +338,84 @@ function playWithDest(dest) {
   }, 33);
 }
 
-// ---------- 文件加载 ----------
+function preview() {
+  if (!S.voice && !S.bgm) { showError(t("error.nothingToPreview")); return; }
+  showError("");
+  playWithDest(null, "preview");
+}
+
+function refreshDownloadLink() {
+  const a = $("downloadLink");
+  if (!a) return;
+  if (S.lastBlob && S.lastUrl) {
+    const ext = (S.lastBlob.type || "").includes("mp4") ? "mp4" : "webm";
+    a.href = S.lastUrl;
+    a.download = `slow_english_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.${ext}`;
+    a.hidden = false;
+  } else {
+    a.removeAttribute("href");
+    a.removeAttribute("download");
+    a.hidden = true;
+  }
+}
+
+function pickMime() {
+  const cands = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4",
+    "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+  for (const m of cands) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+  return "";
+}
+
+function setVideoToRecorded(blob) {
+  if (S.lastUrl) URL.revokeObjectURL(S.lastUrl);
+  S.lastBlob = blob;
+  S.lastUrl = URL.createObjectURL(blob);
+  video.src = S.lastUrl;
+  video.load();
+  refreshDownloadLink();
+}
+
+function record() {
+  if (!window.MediaRecorder) { showError(t("error.noMediaRecorder")); return; }
+  if (!S.voice && !S.bgm) { showError(t("error.nothingToRecord")); return; }
+  if (S.lastUrl) { URL.revokeObjectURL(S.lastUrl); }
+  S.lastBlob = null;
+  S.lastUrl = null;
+  refreshDownloadLink();
+  stopPlayback();
+  setProgress(0);
+  showError("");
+  const ac = ensureCtx();
+  const dest = ac.createMediaStreamDestination();
+  destForRec = dest;
+
+  playWithDest(dest, "record");
+
+  const stream = new MediaStream([
+    ...canvas.captureStream(FPS).getVideoTracks(),
+    ...dest.stream.getAudioTracks(),
+  ]);
+  const mime = pickMime();
+  try {
+    recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
+  } catch (err) {
+    showError(`${t("error.recorderInit")}: ${err.message}`);
+    return;
+  }
+  recChunks = [];
+  recorder.ondataavailable = (e) => { if (e.data.size) recChunks.push(e.data); };
+  recorder.onstop = () => {
+    const type = (recorder.mimeType || "video/webm").split(";")[0];
+    const blob = new Blob(recChunks, { type });
+    setVideoToRecorded(blob);
+    setProgress(1);
+    recorder = null;
+    setStatus(t("status.recordDone"));
+  };
+  const full = S.voice ? S.voice.duration : 30;
+  recStopAt = full;
+  recorder.start();
+}
 
 async function loadAudio(file) {
   const ac = ensureCtx();
@@ -606,8 +556,6 @@ const CLEAR = {
   srt() { S.cues = []; $("srtName").textContent = t("file.notSelectedWithDemo"); },
 };
 
-// ---------- 默认素材（仅本地 fetch，从 dist/ 根读取；file:// 下浏览器会拒，自动跳过） ----------
-
 const DEFAULTS = [
   ["fontMain", ["AlibabaPuHuiTi-Bold.otf", "fonts/AlibabaPuHuiTi-Bold.otf", "../fonts/AlibabaPuHuiTi-Bold.otf"]],
   ["fontTag", ["AlibabaPuHuiTi-Regular.otf", "fonts/AlibabaPuHuiTi-Regular.otf", "../fonts/AlibabaPuHuiTi-Regular.otf"]],
@@ -697,7 +645,7 @@ for (const id of ["enText", "zhText"]) {
   $(id).addEventListener("input", () => drawFrame(0));
 }
 
-$("btnPlay").addEventListener("click", () => { showError(""); play(); });
+$("btnPlay").addEventListener("click", () => { showError(""); preview(); });
 $("btnStop").addEventListener("click", () => {
   stopPlayback();
   setStatus(t("status.stopped"));
