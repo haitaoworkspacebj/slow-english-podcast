@@ -52,12 +52,13 @@ function showError(msg) {
 
 // Show / clear the inline "loading…" state on a file-picker row.
 // When loading, the fname shows a spinner + the filename and the row's
-// Choose / Clear buttons are disabled. Caller is responsible for
-// setting the fname text content when loading finishes.
+// Choose / Clear buttons are disabled. Scope is .filerow (not .field),
+// so fontMain + fontTag can load independently even though they share
+// one .field wrapper. Caller sets the fname text on its own.
 function setRowLoading(nameEl, isLoading) {
-  const field = nameEl ? nameEl.closest(".field") : null;
-  if (!field) return;
-  field.classList.toggle("is-loading", !!isLoading);
+  const row = nameEl ? nameEl.closest(".filerow") : null;
+  if (!row) return;
+  row.classList.toggle("is-loading", !!isLoading);
 }
 
 // Show / hide the video overlay (centered spinner + text).
@@ -698,24 +699,46 @@ const HANDLERS = {
     }
   },
   async fontMain(file) {
+    const nameEl = $("fontMainName");
+    nameEl.textContent = t("status.loading", file.name);
+    setRowLoading(nameEl, true);
     showError("");
     setStatus(t("status.loading", file.name));
-    const pre = await precheckFile(file, "fontMain");
-    if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
-    try { await loadFont(file, "fontMain"); }
-    catch (err) { showError(`${t("error.font")} (${file.name}): ${err.message}`); setStatus(t("status.ready")); return; }
-    rebuildBase(); drawFrame(0);
-    setStatus(t("status.loaded", file.name));
+    try {
+      const pre = await precheckFile(file, "fontMain");
+      if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
+      await loadFont(file, "fontMain");
+      nameEl.textContent = file.name;
+      rebuildBase(); drawFrame(0);
+      setStatus(t("status.loaded", file.name));
+    } catch (err) {
+      showError(`${t("error.font")} (${file.name}): ${err.message}`);
+      setStatus(t("status.ready"));
+      nameEl.textContent = "";
+    } finally {
+      setRowLoading(nameEl, false);
+    }
   },
   async fontTag(file) {
+    const nameEl = $("fontTagName");
+    nameEl.textContent = t("status.loading", file.name);
+    setRowLoading(nameEl, true);
     showError("");
     setStatus(t("status.loading", file.name));
-    const pre = await precheckFile(file, "fontTag");
-    if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
-    try { await loadFont(file, "fontTag"); }
-    catch (err) { showError(`${t("error.font")} (${file.name}): ${err.message}`); setStatus(t("status.ready")); return; }
-    rebuildBase(); drawFrame(0);
-    setStatus(t("status.loaded", file.name));
+    try {
+      const pre = await precheckFile(file, "fontTag");
+      if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
+      await loadFont(file, "fontTag");
+      nameEl.textContent = file.name;
+      rebuildBase(); drawFrame(0);
+      setStatus(t("status.loaded", file.name));
+    } catch (err) {
+      showError(`${t("error.font")} (${file.name}): ${err.message}`);
+      setStatus(t("status.ready"));
+      nameEl.textContent = "";
+    } finally {
+      setRowLoading(nameEl, false);
+    }
   },
   async srt(file) {
     const nameEl = $("srtName");

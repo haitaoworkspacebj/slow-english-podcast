@@ -278,9 +278,10 @@ button.clear {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Inline mini spinner shown next to a fname while its row is loading */
-.field.is-loading .fname { color: var(--accent); }
-.field.is-loading .fname::before {
+/* Inline mini spinner shown next to a fname while its row is loading.
+   Scope is .filerow so fontMain + fontTag (sharing one .field) load independently. */
+.filerow.is-loading .fname { color: var(--accent); }
+.filerow.is-loading .fname::before {
   content: "";
   display: inline-block;
   width: 10px;
@@ -293,7 +294,7 @@ button.clear {
   vertical-align: -1px;
 }
 /* Disable Choose / Clear buttons while a row is loading */
-.field.is-loading button {
+.filerow.is-loading button {
   opacity: 0.45;
   cursor: default;
   pointer-events: none;
