@@ -38,6 +38,10 @@ const S = {
   levels: null,
   playing: false,
   lastBlob: null, lastUrl: null,
+  // Original File/Blob references kept around so we can re-save to localforage
+  // without asking the user to re-pick the file.
+  _voiceFile: null, _bgmFile: null, _imgLeftFile: null,
+  _fontMainFile: null, _fontTagFile: null, _srtFile: null,
 };
 
 function setStatus(text) { $("status").textContent = text; }
@@ -87,6 +91,15 @@ function setActionsState(state) {
   if (play) play.disabled = busy;
   if (rec)  rec.disabled = busy;
   if (stop) stop.disabled = !busy;
+}
+
+// Global busy: locks the whole page (body.app-busy) so the user can't
+// interact with anything except Stop + Save. Driven by a counter so
+// nested operations (e.g. one file upload mid another) compose cleanly.
+let _globalBusy = 0;
+function setGlobalLoading(on) {
+  _globalBusy = on ? _globalBusy + 1 : Math.max(0, _globalBusy - 1);
+  document.body.classList.toggle("app-busy", _globalBusy > 0);
 }
 window.addEventListener("error", (e) => showError(`${e.message || e}`));
 window.addEventListener("unhandledrejection", (e) => showError(`${(e.reason && e.reason.message) || e.reason || e}`));
@@ -635,6 +648,7 @@ const HANDLERS = {
       const pre = await precheckFile(file, "voice");
       if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
       S.voice = await loadAudio(file);
+      S._voiceFile = file;
       S.voiceName = file.name;
       setStatus(t("status.loadingVoice"));
       await new Promise((r) => setTimeout(r, 30));
@@ -653,6 +667,7 @@ const HANDLERS = {
       nameEl.textContent = t("file.notSelected");
     } finally {
       setRowLoading(nameEl, false);
+      updateActionAvailability();
     }
   },
   async bgm(file) {
@@ -665,6 +680,7 @@ const HANDLERS = {
       const pre = await precheckFile(file, "bgm");
       if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
       S.bgm = await loadAudio(file);
+      S._bgmFile = file;
       S.bgmName = file.name;
       nameEl.textContent = file.name;
       setStatus(t("status.bgmLoaded", file.name));
@@ -674,6 +690,7 @@ const HANDLERS = {
       nameEl.textContent = t("file.noBgm");
     } finally {
       setRowLoading(nameEl, false);
+      updateActionAvailability();
     }
   },
   async imgLeft(file) {
@@ -686,6 +703,7 @@ const HANDLERS = {
       const pre = await precheckFile(file, "imgLeft");
       if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
       S.imgLeft = await loadImage(file);
+      S._imgLeftFile = file;
       nameEl.textContent = file.name;
       rebuildBase();
       drawFrame(0);
@@ -708,6 +726,7 @@ const HANDLERS = {
       const pre = await precheckFile(file, "fontMain");
       if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
       await loadFont(file, "fontMain");
+      S._fontMainFile = file;
       nameEl.textContent = file.name;
       rebuildBase(); drawFrame(0);
       setStatus(t("status.loaded", file.name));
@@ -729,6 +748,7 @@ const HANDLERS = {
       const pre = await precheckFile(file, "fontTag");
       if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
       await loadFont(file, "fontTag");
+      S._fontTagFile = file;
       nameEl.textContent = file.name;
       rebuildBase(); drawFrame(0);
       setStatus(t("status.loaded", file.name));
@@ -750,6 +770,7 @@ const HANDLERS = {
       const pre = await precheckFile(file, "srt");
       if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
       S.cues = parseSrt(await file.text());
+      S._srtFile = file;
       S.srtName = file.name;
       nameEl.textContent = `${file.name} (${t("srt.count", S.cues.length)})`;
       refreshDemoNote();
@@ -766,9 +787,9 @@ const HANDLERS = {
 };
 
 const CLEAR = {
-  voice() { S.voice = null; S.levels = null; $("voiceName").textContent = t("file.notSelected"); },
-  bgm() { S.bgm = null; $("bgmName").textContent = t("file.noBgm"); },
-  imgLeft() { S.imgLeft = null; $("imgLeftName").textContent = t("file.notSelected"); rebuildBase(); },
+  voice() { S.voice = null; S._voiceFile = null; S.levels = null; $("voiceName").textContent = t("file.notSelected"); updateActionAvailability(); },
+  bgm() { S.bgm = null; S._bgmFile = null; $("bgmName").textContent = t("file.noBgm"); updateActionAvailability(); },
+  imgLeft() { S.imgLeft = null; S._imgLeftFile = null; $("imgLeftName").textContent = t("file.notSelected"); rebuildBase(); drawFrame(0); },
   srt() {
     S.cues = [];
     S.srtName = "";
@@ -885,6 +906,22 @@ for (const id of ["enText", "zhText"]) {
 const demoNoteClearBtn = $("demoNoteClear");
 if (demoNoteClearBtn) demoNoteClearBtn.addEventListener("click", () => { CLEAR.srt(); drawFrame(0); });
 
+// ---------- action availability (Preview / Record require voice OR bgm) ----------
+function updateActionAvailability() {
+  const hasContent = !!(S.voice || S.bgm);
+  $("btnPlay").disabled = !hasContent;
+  $("btnRecord").disabled = !hasContent;
+  // Save button needs at least one asset OR custom text
+  const hasAnything =
+    S._voiceFile || S._bgmFile || S._imgLeftFile ||
+    S._fontMainFile || S._fontTagFile || S._srtFile ||
+    (($("enText") && $("enText").value !== "This is how you build your English brain.") ||
+     ($("zhText") && $("zhText").value !== "这就是建立你“英语脑”的方式")) ||
+    S.lastBlob;
+  const saveBtn = $("btnSave");
+  if (saveBtn) saveBtn.disabled = !hasAnything;
+}
+
 $("btnPlay").addEventListener("click", () => { showError(""); preview(); });
 $("btnStop").addEventListener("click", () => {
   stopPlayback();
@@ -894,7 +931,227 @@ $("btnStop").addEventListener("click", () => {
 });
 $("btnRecord").addEventListener("click", () => { showError(""); record(); });
 
-rebuildBase();
-drawFrame(0);
-setStatus(t("status.ready"));
-loadDefaults();
+// ---------- localforage save / load / clear ----------
+// Per-item save: a single failure (oversize, quota, deserialize) must NOT
+// abort the whole save — capture each result and report a partial outcome.
+async function saveAll() {
+  const btn = $("btnSave");
+  const labelEl = btn ? btn.querySelector("[data-i18n='btn.save']") : null;
+  const origLabel = labelEl ? labelEl.textContent : "";
+  if (btn) { btn.classList.add("is-saving"); btn.disabled = true; }
+  if (labelEl) labelEl.textContent = t("status.saving");
+  setStatus(t("status.saving"));
+
+  const items = [
+    ["asset.voice", S._voiceFile ? { blob: S._voiceFile, name: S.voiceName } : null],
+    ["asset.bgm", S._bgmFile ? { blob: S._bgmFile, name: S.bgmName } : null],
+    ["asset.imgLeft", S._imgLeftFile ? { blob: S._imgLeftFile, name: "image" } : null],
+    ["asset.fontMain", S._fontMainFile ? { blob: S._fontMainFile, name: "fontMain" } : null],
+    ["asset.fontTag", S._fontTagFile ? { blob: S._fontTagFile, name: "fontTag" } : null],
+    ["asset.srt", S._srtFile ? { blob: S._srtFile, name: S.srtName } : null],
+    ["blob.lastRecording", S.lastBlob ? { blob: S.lastBlob, name: "lastRecording" } : null],
+  ];
+  let saved = 0, failed = 0;
+  const failures = [];
+
+  for (const [key, payload] of items) {
+    try {
+      if (payload) {
+        await localforage.setItem(key, payload);
+        saved++;
+      } else {
+        // No current value for this slot — drop any stale entry.
+        await localforage.removeItem(key);
+      }
+    } catch (err) {
+      failed++;
+      failures.push(`${key} (${err && err.message ? err.message : err})`);
+      console.warn("save failed for", key, err);
+    }
+  }
+  // Texts — separate try so a text failure doesn't taint the asset result list.
+  const textItems = [
+    ["text.enText", ($("enText") && $("enText").value) || ""],
+    ["text.zhText", ($("zhText") && $("zhText").value) || ""],
+  ];
+  for (const [key, val] of textItems) {
+    try { await localforage.setItem(key, val); }
+    catch (err) {
+      failed++;
+      failures.push(`${key} (${err && err.message ? err.message : err})`);
+      console.warn("save failed for", key, err);
+    }
+  }
+
+  if (btn) btn.classList.remove("is-saving");
+
+  // Status / button label outcome
+  if (failed === 0 && saved > 0) {
+    setStatus(t("status.saved"));
+    if (btn) btn.classList.add("just-saved");
+    if (labelEl) labelEl.textContent = t("status.savedShort");
+  } else if (saved > 0 && failed > 0) {
+    setStatus(t("status.savedPartial", saved, failed));
+    showError(t("status.savedPartial", saved, failed) + "\n" + failures.join("\n"));
+  } else if (saved === 0) {
+    setStatus(t("status.nothingToSave"));
+  } else {
+    setStatus(t("status.saveFailed"));
+  }
+
+  // Briefly show success state then revert label
+  setTimeout(() => {
+    if (btn) btn.classList.remove("just-saved");
+    if (labelEl) labelEl.textContent = origLabel;
+    if (btn) btn.disabled = false;
+    updateActionAvailability();
+  }, 2200);
+}
+
+async function clearAll() {
+  const btn = $("btnClearAll");
+  if (btn) btn.disabled = true;
+  setStatus(t("status.clearing"));
+  setGlobalLoading(true);
+
+  // Wipe IDB first so a quota failure doesn't strand us
+  try {
+    if (window.localforage) await localforage.clear();
+  } catch (err) {
+    console.warn("localforage.clear failed", err);
+  }
+
+  // Reset RAM state
+  S.voice = null; S._voiceFile = null; S.voiceName = ""; S.levels = null;
+  S.bgm = null; S._bgmFile = null; S.bgmName = "";
+  S.imgLeft = null; S._imgLeftFile = null;
+  S._fontMainFile = null; S._fontTagFile = null;
+  S.cues = []; S._srtFile = null; S.srtName = "";
+  S.lastBlob = null;
+  if (S.lastUrl) { URL.revokeObjectURL(S.lastUrl); S.lastUrl = null; }
+  S.fonts = [];
+  try { video.pause(); video.removeAttribute("src"); video.load(); } catch (e) {}
+  setVideoOverlay(null);
+
+  // Reset DOM
+  $("voiceName").textContent = t("file.notSelected");
+  $("bgmName").textContent = t("file.noBgm");
+  $("imgLeftName").textContent = t("file.notSelected");
+  $("fontMainName").textContent = "";
+  $("fontTagName").textContent = "";
+  $("srtName").textContent = t("file.notSelectedWithDemo");
+  $("enText").value = "This is how you build your English brain.";
+  $("zhText").value = "这就是建立你“英语脑”的方式";
+  $("imgLeftH").value = "580";
+  $("imgLeftHVal").textContent = "580px";
+  $("fontMain").innerHTML = "";
+  $("fontTag").innerHTML = "";
+  S.fontMain = ""; S.fontTag = ""; S.imgLeftH = 580;
+  refreshDemoNote();
+  refreshDownloadLink();
+  refreshFontSelects();
+  rebuildBase();
+  drawFrame(0);
+  setProgress(0);
+  showError("");
+  setStatus(t("status.clearedAll"));
+
+  if (btn) btn.disabled = false;
+  setGlobalLoading(false);
+  updateActionAvailability();
+}
+
+// Read each saved asset and feed it back through the matching handler.
+// Per-item try/catch so a single bad entry doesn't block the rest.
+async function tryAutoRestore() {
+  if (!window.localforage) return 0;
+  let keys;
+  try { keys = await localforage.keys(); } catch (e) { return 0; }
+  if (!keys || !keys.length) return 0;
+
+  setStatus(t("status.restoring"));
+  setGlobalLoading(true);
+
+  const assetMap = [
+    ["asset.voice", "voice"],
+    ["asset.bgm", "bgm"],
+    ["asset.imgLeft", "imgLeft"],
+    ["asset.fontMain", "fontMain"],
+    ["asset.fontTag", "fontTag"],
+    ["asset.srt", "srt"],
+  ];
+  let restored = 0;
+  for (const [key, handlerName] of assetMap) {
+    let entry;
+    try { entry = await localforage.getItem(key); } catch (e) { continue; }
+    if (!entry || !entry.blob) continue;
+    try {
+      const file = new File([entry.blob], entry.name || handlerName, { type: entry.blob.type });
+      await HANDLERS[handlerName](file);
+      restored++;
+    } catch (e) {
+      console.warn("restore failed for", key, e);
+    }
+  }
+  // Texts
+  for (const key of ["text.enText", "text.zhText"]) {
+    try {
+      const v = await localforage.getItem(key);
+      const id = key.split(".")[1];
+      const el = $(id);
+      if (typeof v === "string" && el) el.value = v;
+    } catch (e) {}
+  }
+  // Last recording
+  try {
+    const lastRec = await localforage.getItem("blob.lastRecording");
+    if (lastRec && lastRec.blob) {
+      S.lastBlob = lastRec.blob;
+      S.lastUrl = URL.createObjectURL(lastRec.blob);
+      video.src = S.lastUrl;
+      video.load();
+      refreshDownloadLink();
+      restored++;
+    }
+  } catch (e) {}
+
+  setGlobalLoading(false);
+  if (restored > 0) setStatus(t("status.restored", restored));
+  return restored;
+}
+
+// Configure localforage to use our own DB + store
+if (window.localforage) {
+  try {
+    localforage.config({
+      name: "slow-english-podcast",
+      storeName: "assets",
+      description: "Slow English Podcast — user assets + last recording",
+    });
+  } catch (e) { /* config can fail in privacy mode; ignore */ }
+}
+
+// ---------- app boot ----------
+async function bootApp() {
+  rebuildBase();
+  drawFrame(0);
+  setStatus(t("status.ready"));
+  updateActionAvailability();
+  // Try restoring from localforage first; fall back to bundled defaults.
+  let restored = 0;
+  try { restored = await tryAutoRestore(); } catch (e) { console.warn(e); }
+  if (restored === 0) loadDefaults();
+  updateActionAvailability();
+}
+
+// ---------- wire up session buttons ----------
+$("btnSave").addEventListener("click", async () => { showError(""); await saveAll(); });
+$("btnClearAll").addEventListener("click", async () => { showError(""); await clearAll(); });
+
+const infoTip = $("infoTip");
+if (infoTip) {
+  infoTip.setAttribute("data-tip", t("tip.aboutSaving"));
+  infoTip.setAttribute("data-tip-i18n", "tip.aboutSaving");
+}
+
+bootApp();
