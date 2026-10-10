@@ -6,7 +6,7 @@
 
 ## 预览（30 秒样片）
 
-<video src="https://haituoworkspacebj.github.io/slow-english-podcast/slow_english_demo.mp4" controls width="720" preload="metadata"></video>
+![Demo video](media/slow_english_demo.mp4)
 
 样片由仓库自带的 `assets/slow_english.mp3` + `assets/bgm.mp3` + `assets/Podcaster.webp` 加双语 SRT 渲染而成。**声波只跟随人声跳动，不受 BGM 影响**。
 

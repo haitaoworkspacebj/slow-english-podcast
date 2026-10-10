@@ -6,7 +6,7 @@ Generate slow-English podcast videos with bilingual subtitles, voice-driven wave
 
 ## Preview (30-second sample)
 
-<video src="https://haituoworkspacebj.github.io/slow-english-podcast/slow_english_demo.mp4" controls width="720" preload="metadata"></video>
+![Demo video](media/slow_english_demo.mp4)
 
 A 30-second sample rendered from the bundled `assets/slow_english.mp3` + `assets/bgm.mp3` + `assets/Podcaster.webp`, with the bilingual SRT. The waveform follows the voice track only — adding BGM does not change it.
 
