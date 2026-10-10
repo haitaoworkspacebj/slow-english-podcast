@@ -49,6 +49,44 @@ function showError(msg) {
   box.hidden = false;
   box.textContent = msg;
 }
+
+// Show / clear the inline "loading…" state on a file-picker row.
+// When loading, the fname shows a spinner + the filename and the row's
+// Choose / Clear buttons are disabled. Caller is responsible for
+// setting the fname text content when loading finishes.
+function setRowLoading(nameEl, isLoading) {
+  const field = nameEl ? nameEl.closest(".field") : null;
+  if (!field) return;
+  field.classList.toggle("is-loading", !!isLoading);
+}
+
+// Show / hide the video overlay (centered spinner + text).
+// Pass a string to show with that text, or null / "" to hide.
+function setVideoOverlay(text) {
+  const overlay = $("videoOverlay");
+  const textEl = $("videoOverlayText");
+  if (!overlay) return;
+  if (text) {
+    if (textEl) textEl.textContent = text;
+    overlay.hidden = false;
+  } else {
+    overlay.hidden = true;
+  }
+}
+
+// Toggle the right-side action buttons between idle and busy.
+// Idle: btnPlay + btnRecord enabled, btnStop disabled.
+// Busy: btnPlay + btnRecord disabled, btnStop enabled.
+function setActionsState(state) {
+  const bar = $("actionsBar");
+  if (!bar) return;
+  const busy = state !== "idle";
+  bar.classList.toggle("is-busy", busy);
+  const play = $("btnPlay"), stop = $("btnStop"), rec = $("btnRecord");
+  if (play) play.disabled = busy;
+  if (rec)  rec.disabled = busy;
+  if (stop) stop.disabled = !busy;
+}
 window.addEventListener("error", (e) => showError(`${e.message || e}`));
 window.addEventListener("unhandledrejection", (e) => showError(`${(e.reason && e.reason.message) || e.reason || e}`));
 
@@ -288,6 +326,8 @@ function stopPlayback() {
   if (recorder && recorder.state === "recording") recorder.stop();
   if (!recorder || recorder.state !== "recording") {
     setStatus(t("status.stopped"));
+    setActionsState("idle");
+    setVideoOverlay(null);
   }
 }
 
@@ -326,6 +366,11 @@ function playWithDest(dest, mode /* "preview" | "record" */) {
   setStatus(mode === "record"
     ? t("status.recording", Math.round(endAt - playStart))
     : t("status.playing"));
+  if (mode === "record") {
+    setVideoOverlay(t("status.recording", Math.round(endAt - playStart)));
+  } else {
+    setVideoOverlay(null);
+  }
   let lastDraw = 0;
   const step = () => {
     lastDraw = performance.now();
@@ -349,6 +394,7 @@ function playWithDest(dest, mode /* "preview" | "record" */) {
 function preview() {
   if (!S.voice && !S.bgm) { showError(t("error.nothingToPreview")); return; }
   showError("");
+  setActionsState("busy");
   playWithDest(null, "preview");
 }
 
@@ -399,6 +445,8 @@ function record() {
   setProgress(0);
   showError("");
   setStatus(t("status.loadingRecord"));
+  setVideoOverlay(t("status.loadingRecord"));
+  setActionsState("busy");
   const ac = ensureCtx();
   const dest = ac.createMediaStreamDestination();
   destForRec = dest;
@@ -415,6 +463,8 @@ function record() {
   } catch (err) {
     showError(`${t("error.recorderInit")}: ${err.message}`);
     setStatus(t("status.ready"));
+    setActionsState("idle");
+    setVideoOverlay(null);
     return;
   }
   recChunks = [];
@@ -424,6 +474,7 @@ function record() {
     try { recorder.stop(); } catch (err) {}
   };
   recorder.onstop = () => {
+    setVideoOverlay(t("status.preparingVideo"));
     try {
       const type = (recorder.mimeType || "video/webm").split(";")[0];
       const blob = new Blob(recChunks, { type });
@@ -439,6 +490,8 @@ function record() {
       showError(`${t("error.recording")}: ${err.message || err}`);
       setStatus(t("status.ready"));
     }
+    setActionsState("idle");
+    setVideoOverlay(null);
     recorder = null;
   };
   const full = S.voice ? S.voice.duration : 30;
@@ -448,6 +501,8 @@ function record() {
   } catch (err) {
     showError(`${t("error.recording")}: ${err.message || err}`);
     setStatus(t("status.ready"));
+    setActionsState("idle");
+    setVideoOverlay(null);
   }
 }
 
@@ -570,60 +625,77 @@ function parseSrt(text) {
 
 const HANDLERS = {
   async voice(file) {
+    const nameEl = $("voiceName");
+    nameEl.textContent = t("status.loading", file.name);
+    setRowLoading(nameEl, true);
     showError("");
     setStatus(t("status.loading", file.name));
-    const pre = await precheckFile(file, "voice");
-    if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
     try {
+      const pre = await precheckFile(file, "voice");
+      if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
       S.voice = await loadAudio(file);
+      S.voiceName = file.name;
+      setStatus(t("status.loadingVoice"));
+      await new Promise((r) => setTimeout(r, 30));
+      try {
+        S.levels = barLevels(await toMono22k(S.voice));
+      } catch (err) {
+        showError(`${t("error.fft")} (${file.name}): ${err.message}`);
+        S.levels = null;
+      }
+      nameEl.textContent = file.name;
+      drawFrame(0);
+      setStatus(t("status.voiceLoaded", file.name, S.voice.duration.toFixed(1)));
     } catch (err) {
       showError(`${t("error.decodeAudio")} (${file.name}): ${err.message}`);
       setStatus(t("status.ready"));
-      return;
+      nameEl.textContent = t("file.notSelected");
+    } finally {
+      setRowLoading(nameEl, false);
     }
-    S.voiceName = file.name;
-    $("voiceName").textContent = file.name;
-    setStatus(t("status.loadingVoice"));
-    await new Promise((r) => setTimeout(r, 30));
-    try {
-      S.levels = barLevels(await toMono22k(S.voice));
-    } catch (err) {
-      showError(`${t("error.fft")} (${file.name}): ${err.message}`);
-      S.levels = null;
-    }
-    drawFrame(0);
-    setStatus(t("status.voiceLoaded", file.name, S.voice.duration.toFixed(1)));
   },
   async bgm(file) {
+    const nameEl = $("bgmName");
+    nameEl.textContent = t("status.loading", file.name);
+    setRowLoading(nameEl, true);
     showError("");
     setStatus(t("status.loading", file.name));
-    const pre = await precheckFile(file, "bgm");
-    if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
     try {
+      const pre = await precheckFile(file, "bgm");
+      if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
       S.bgm = await loadAudio(file);
+      S.bgmName = file.name;
+      nameEl.textContent = file.name;
+      setStatus(t("status.bgmLoaded", file.name));
     } catch (err) {
       showError(`${t("error.decodeAudio")} (${file.name}): ${err.message}`);
       setStatus(t("status.ready"));
-      return;
+      nameEl.textContent = t("file.noBgm");
+    } finally {
+      setRowLoading(nameEl, false);
     }
-    S.bgmName = file.name;
-    $("bgmName").textContent = file.name;
-    setStatus(t("status.bgmLoaded", file.name));
   },
   async imgLeft(file) {
+    const nameEl = $("imgLeftName");
+    nameEl.textContent = t("status.loading", file.name);
+    setRowLoading(nameEl, true);
     showError("");
     setStatus(t("status.loading", file.name));
-    const pre = await precheckFile(file, "imgLeft");
-    if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
     try {
+      const pre = await precheckFile(file, "imgLeft");
+      if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
       S.imgLeft = await loadImage(file);
+      nameEl.textContent = file.name;
+      rebuildBase();
+      drawFrame(0);
+      setStatus(t("status.loaded", file.name));
     } catch (err) {
       showError(`${t("error.decodeImage")} (${file.name}): ${err.message}`);
       setStatus(t("status.ready"));
-      return;
+      nameEl.textContent = t("file.notSelected");
+    } finally {
+      setRowLoading(nameEl, false);
     }
-    $("imgLeftName").textContent = file.name;
-    rebuildBase(); drawFrame(0);
   },
   async fontMain(file) {
     showError("");
@@ -633,6 +705,7 @@ const HANDLERS = {
     try { await loadFont(file, "fontMain"); }
     catch (err) { showError(`${t("error.font")} (${file.name}): ${err.message}`); setStatus(t("status.ready")); return; }
     rebuildBase(); drawFrame(0);
+    setStatus(t("status.loaded", file.name));
   },
   async fontTag(file) {
     showError("");
@@ -642,23 +715,30 @@ const HANDLERS = {
     try { await loadFont(file, "fontTag"); }
     catch (err) { showError(`${t("error.font")} (${file.name}): ${err.message}`); setStatus(t("status.ready")); return; }
     rebuildBase(); drawFrame(0);
+    setStatus(t("status.loaded", file.name));
   },
   async srt(file) {
+    const nameEl = $("srtName");
+    nameEl.textContent = t("status.loading", file.name);
+    setRowLoading(nameEl, true);
     showError("");
     setStatus(t("status.loading", file.name));
-    const pre = await precheckFile(file, "srt");
-    if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
     try {
+      const pre = await precheckFile(file, "srt");
+      if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
       S.cues = parseSrt(await file.text());
+      S.srtName = file.name;
+      nameEl.textContent = `${file.name} (${t("srt.count", S.cues.length)})`;
+      refreshDemoNote();
+      drawFrame(0);
+      setStatus(t("status.loaded", file.name));
     } catch (err) {
       showError(`${t("error.srt")} (${file.name}): ${err.message}`);
       setStatus(t("status.ready"));
-      return;
+      nameEl.textContent = t("file.notSelectedWithDemo");
+    } finally {
+      setRowLoading(nameEl, false);
     }
-    S.srtName = file.name;
-    $("srtName").textContent = `${file.name} (${t("srt.count", S.cues.length)})`;
-    refreshDemoNote();
-    drawFrame(0);
   },
 };
 

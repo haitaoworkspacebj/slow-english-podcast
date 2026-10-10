@@ -100,9 +100,15 @@
     <section class="stage">
       <div class="panel">
         <h2 data-i18n="stage.video">Video</h2>
-        <video id="player" controls playsinline preload="metadata"></video>
+        <div class="video-wrap">
+          <video id="player" controls playsinline preload="metadata"></video>
+          <div id="videoOverlay" class="video-overlay" hidden>
+            <div class="spinner" aria-hidden="true"></div>
+            <div id="videoOverlayText" class="video-overlay-text">…</div>
+          </div>
+        </div>
         <p class="hint" data-i18n="stage.previewHint">Your recorded video will appear here. Click Generate preview to scrub through the layout, or Generate video to record and download an MP4 / WebM.</p>
-        <div class="actions">
+        <div class="actions" id="actionsBar">
           <button id="btnPlay" class="primary" data-i18n="btn.play">▶ Generate preview</button>
           <button id="btnStop" data-i18n="btn.stop">■ Stop</button>
           <button id="btnRecord" data-i18n="btn.record">● Generate video</button>
