@@ -11,7 +11,16 @@ const Y_EN = 238, Y_ZH = 423, Y_TAG = 1002;
 const TEXT_MAX_W = W * 0.84;
 const WAVE_CX = W / 2, WAVE_CY = 763, N_BARS = 49, BAR_W = 6, BAR_GAP = 5, BAR_MIN = 6, BAR_MAX = 120;
 const FADE = 0.15, BGM_FADE = 3, IMG_MARGIN = 30;
-const ACCEPT = { voice: "audio/*", bgm: "audio/*", imgLeft: "image/*", srt: ".srt", fontMain: ".otf,.ttf", fontTag: ".otf,.ttf" };
+const ACCEPT = {
+  voice: "audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.opus",
+  bgm: "audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.opus",
+  imgLeft: "image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp",
+  srt: ".srt,.vtt",
+  fontMain: ".otf,.ttf,.woff,.woff2",
+  fontTag: ".otf,.ttf,.woff,.woff2",
+};
+const MAX_FILE_BYTES = 200 * 1024 * 1024;   // 200MB hard cap
+const MIN_FILE_BYTES = 4;
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("canvas");
@@ -381,9 +390,15 @@ function record() {
   S.lastBlob = null;
   S.lastUrl = null;
   refreshDownloadLink();
+  // Pause and reset the right-side video so the demo doesn't keep
+  // playing while we record a new clip.
+  try { if (!video.paused) video.pause(); } catch (e) {}
+  video.removeAttribute("src");
+  try { video.load(); } catch (e) {}
   stopPlayback();
   setProgress(0);
   showError("");
+  setStatus(t("status.loadingRecord"));
   const ac = ensureCtx();
   const dest = ac.createMediaStreamDestination();
   destForRec = dest;
@@ -399,26 +414,108 @@ function record() {
     recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
   } catch (err) {
     showError(`${t("error.recorderInit")}: ${err.message}`);
+    setStatus(t("status.ready"));
     return;
   }
   recChunks = [];
   recorder.ondataavailable = (e) => { if (e.data.size) recChunks.push(e.data); };
+  recorder.onerror = (e) => {
+    showError(`${t("error.recording")}: ${e.error && e.error.message ? e.error.message : e.error || "unknown"}`);
+    try { recorder.stop(); } catch (err) {}
+  };
   recorder.onstop = () => {
-    const type = (recorder.mimeType || "video/webm").split(";")[0];
-    const blob = new Blob(recChunks, { type });
-    setVideoToRecorded(blob);
-    setProgress(1);
+    try {
+      const type = (recorder.mimeType || "video/webm").split(";")[0];
+      const blob = new Blob(recChunks, { type });
+      if (blob.size === 0) {
+        showError(t("error.emptyRecording"));
+        setStatus(t("status.ready"));
+      } else {
+        setVideoToRecorded(blob);
+        setProgress(1);
+        setStatus(t("status.recordDone"));
+      }
+    } catch (err) {
+      showError(`${t("error.recording")}: ${err.message || err}`);
+      setStatus(t("status.ready"));
+    }
     recorder = null;
-    setStatus(t("status.recordDone"));
   };
   const full = S.voice ? S.voice.duration : 30;
   recStopAt = full;
-  recorder.start();
+  try {
+    recorder.start();
+  } catch (err) {
+    showError(`${t("error.recording")}: ${err.message || err}`);
+    setStatus(t("status.ready"));
+  }
 }
 
 async function loadAudio(file) {
   const ac = ensureCtx();
   return ac.decodeAudioData(await file.arrayBuffer());
+}
+
+// ---------- 文件预检测 ----------
+
+function sniff(head, kind) {
+  if (head.length < 4) return false;
+  const b0 = head[0], b1 = head[1], b2 = head[2], b3 = head[3];
+  // Common audio: RIFF/WAVE, ID3, MP3 sync, OggS, ftyp, fLaC
+  if (b0 === 0x52 && b1 === 0x49 && b2 === 0x46 && b3 === 0x46) return true;             // RIFF (WAV)
+  if (b0 === 0x49 && b1 === 0x44 && b2 === 0x33) return true;                                  // ID3 (MP3 tag)
+  if (b0 === 0xFF && (b1 & 0xE0) === 0xE0) return true;                                          // MP3 sync
+  if (b0 === 0x4F && b1 === 0x67 && b2 === 0x67 && b3 === 0x53) return true;                  // OggS
+  if (b0 === 0x66 && b1 === 0x74 && b2 === 0x79 && b3 === 0x70) return true;                  // ftyp (MP4/M4A/AAC)
+  if (b0 === 0x66 && b1 === 0x4C && b2 === 0x61 && b3 === 0x43) return true;                  // fLaC
+  // Common image: PNG, JPEG, RIFF/WEBP, GIF87a/GIF89a, BMP
+  if (b0 === 0x89 && b1 === 0x50 && b2 === 0x4E && b3 === 0x47) return true;                  // PNG
+  if (b0 === 0xFF && b1 === 0xD8 && b2 === 0xFF) return true;                                  // JPEG
+  if (b0 === 0x47 && b1 === 0x49 && b2 === 0x46 && b3 === 0x38) return true;                  // GIF8
+  // BMP "BM"
+  if (b0 === 0x42 && b1 === 0x4D) return true;
+  // Font: OTTO, wOFF, wOF2, true, \0\1\0\0 (TTF)
+  if (b0 === 0x4F && b1 === 0x54 && b2 === 0x54 && b3 === 0x4F) return true;                  // OTF
+  if (b0 === 0x77 && b1 === 0x4F && b2 === 0x46 && b3 === 0x46) return true;                  // WOFF
+  if (b0 === 0x77 && b1 === 0x4F && b2 === 0x46 && b3 === 0x32) return true;                  // WOFF2
+  if (b0 === 0x74 && b1 === 0x72 && b2 === 0x75 && b3 === 0x65) return true;                  // true (TTF)
+  if (b0 === 0x00 && b1 === 0x01 && b2 === 0x00 && b3 === 0x00) return true;                  // TTF
+  return false;
+}
+
+async function precheckFile(file, kind) {
+  if (!file || file.size === 0) {
+    return { ok: false, reason: t("error.fileEmpty", file ? file.name : "") };
+  }
+  if (file.size > MAX_FILE_BYTES) {
+    return { ok: false, reason: t("error.fileTooLarge", file.name, (file.size / 1048576).toFixed(1)) };
+  }
+  if (file.size < MIN_FILE_BYTES) {
+    return { ok: false, reason: t("error.fileEmpty", file.name) };
+  }
+  // Magic-byte sniff for binary kinds
+  if (kind === "voice" || kind === "bgm" || kind === "imgLeft" ||
+      kind === "fontMain" || kind === "fontTag") {
+    try {
+      const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+      if (!sniff(head, kind)) {
+        return { ok: false, reason: t("error.badMagic", file.name, kind) };
+      }
+    } catch (e) {
+      return { ok: false, reason: t("error.readFailed", file.name, e.message || e) };
+    }
+  }
+  if (kind === "srt") {
+    try {
+      const text = await file.text();
+      if (!/\d{1,3}[^\n]*\n\d{2}:\d{2}:\d{2}[,.]\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}[,.]\d{3}/.test(text)) {
+        return { ok: false, reason: t("error.notSrt", file.name) };
+      }
+    } catch (e) {
+      return { ok: false, reason: t("error.readFailed", file.name, e.message || e) };
+    }
+  }
+  return { ok: true };
 }
 
 async function loadImage(file) {
@@ -475,20 +572,23 @@ const HANDLERS = {
   async voice(file) {
     showError("");
     setStatus(t("status.loading", file.name));
+    const pre = await precheckFile(file, "voice");
+    if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
     try {
       S.voice = await loadAudio(file);
     } catch (err) {
       showError(`${t("error.decodeAudio")} (${file.name}): ${err.message}`);
+      setStatus(t("status.ready"));
       return;
     }
     S.voiceName = file.name;
     $("voiceName").textContent = file.name;
-    setStatus(t("status.analyzing"));
+    setStatus(t("status.loadingVoice"));
     await new Promise((r) => setTimeout(r, 30));
     try {
       S.levels = barLevels(await toMono22k(S.voice));
     } catch (err) {
-      showError(`${t("error.fft")}: ${err.message}`);
+      showError(`${t("error.fft")} (${file.name}): ${err.message}`);
       S.levels = null;
     }
     drawFrame(0);
@@ -497,10 +597,13 @@ const HANDLERS = {
   async bgm(file) {
     showError("");
     setStatus(t("status.loading", file.name));
+    const pre = await precheckFile(file, "bgm");
+    if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
     try {
       S.bgm = await loadAudio(file);
     } catch (err) {
       showError(`${t("error.decodeAudio")} (${file.name}): ${err.message}`);
+      setStatus(t("status.ready"));
       return;
     }
     S.bgmName = file.name;
@@ -510,10 +613,13 @@ const HANDLERS = {
   async imgLeft(file) {
     showError("");
     setStatus(t("status.loading", file.name));
+    const pre = await precheckFile(file, "imgLeft");
+    if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
     try {
       S.imgLeft = await loadImage(file);
     } catch (err) {
       showError(`${t("error.decodeImage")} (${file.name}): ${err.message}`);
+      setStatus(t("status.ready"));
       return;
     }
     $("imgLeftName").textContent = file.name;
@@ -522,24 +628,31 @@ const HANDLERS = {
   async fontMain(file) {
     showError("");
     setStatus(t("status.loading", file.name));
+    const pre = await precheckFile(file, "fontMain");
+    if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
     try { await loadFont(file, "fontMain"); }
-    catch (err) { showError(`${t("error.font")} (${file.name}): ${err.message}`); return; }
+    catch (err) { showError(`${t("error.font")} (${file.name}): ${err.message}`); setStatus(t("status.ready")); return; }
     rebuildBase(); drawFrame(0);
   },
   async fontTag(file) {
     showError("");
     setStatus(t("status.loading", file.name));
+    const pre = await precheckFile(file, "fontTag");
+    if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
     try { await loadFont(file, "fontTag"); }
-    catch (err) { showError(`${t("error.font")} (${file.name}): ${err.message}`); return; }
+    catch (err) { showError(`${t("error.font")} (${file.name}): ${err.message}`); setStatus(t("status.ready")); return; }
     rebuildBase(); drawFrame(0);
   },
   async srt(file) {
     showError("");
     setStatus(t("status.loading", file.name));
+    const pre = await precheckFile(file, "srt");
+    if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
     try {
       S.cues = parseSrt(await file.text());
     } catch (err) {
       showError(`${t("error.srt")} (${file.name}): ${err.message}`);
+      setStatus(t("status.ready"));
       return;
     }
     S.srtName = file.name;
