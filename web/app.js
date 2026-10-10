@@ -657,6 +657,7 @@ const HANDLERS = {
     }
     S.srtName = file.name;
     $("srtName").textContent = `${file.name} (${t("srt.count", S.cues.length)})`;
+    refreshDemoNote();
     drawFrame(0);
   },
 };
@@ -665,8 +666,29 @@ const CLEAR = {
   voice() { S.voice = null; S.levels = null; $("voiceName").textContent = t("file.notSelected"); },
   bgm() { S.bgm = null; $("bgmName").textContent = t("file.noBgm"); },
   imgLeft() { S.imgLeft = null; $("imgLeftName").textContent = t("file.notSelected"); rebuildBase(); },
-  srt() { S.cues = []; $("srtName").textContent = t("file.notSelectedWithDemo"); },
+  srt() {
+    S.cues = [];
+    S.srtName = "";
+    $("srtName").textContent = t("file.notSelectedWithDemo");
+    refreshDemoNote();
+  },
 };
+
+function refreshDemoNote() {
+  const el = $("demoNote");
+  const txt = $("demoNoteText");
+  if (!el || !txt) return;
+  if (S.cues && S.cues.length) {
+    txt.textContent = t("file.demoNote", S.cues.length);
+    el.hidden = false;
+  } else if ($("srtName").textContent && $("srtName").textContent !== t("file.notSelectedWithDemo")) {
+    // SRT name still shown but cues empty (parse failed) — already reported via showError.
+    txt.textContent = t("file.demoNote", 0);
+    el.hidden = false;
+  } else {
+    el.hidden = true;
+  }
+}
 
 const DEFAULTS = [
   ["fontMain", ["AlibabaPuHuiTi-Bold.otf", "fonts/AlibabaPuHuiTi-Bold.otf", "../fonts/AlibabaPuHuiTi-Bold.otf"]],
@@ -756,6 +778,9 @@ for (const id of ["fontMain", "fontTag"]) {
 for (const id of ["enText", "zhText"]) {
   $(id).addEventListener("input", () => drawFrame(0));
 }
+
+const demoNoteClearBtn = $("demoNoteClear");
+if (demoNoteClearBtn) demoNoteClearBtn.addEventListener("click", () => { CLEAR.srt(); drawFrame(0); });
 
 $("btnPlay").addEventListener("click", () => { showError(""); preview(); });
 $("btnStop").addEventListener("click", () => {

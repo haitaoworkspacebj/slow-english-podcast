@@ -13,6 +13,10 @@
       "file.fontMain": "Body font (EN / ZH)",
       "file.fontTag": "Tagline font",
       "file.demoText": "Demo subtitle text (used when no SRT)",
+      "file.demoNote": "SRT active ({0} cues) — demo text above is ignored. ",
+      "file.demoNoteClear": "Clear SRT",
+      "file.demoNoteReady": "No SRT loaded — these texts will appear as subtitles.",
+      "file.demoNoteEmpty": "Add an EN + ZH line above (or upload an SRT).",
       "file.recDuration": "Recording duration (seconds, 0 = full)",
       "file.recHint": "Recording runs in real time",
       "file.chooseAudio": "Choose audio…",
@@ -31,7 +35,7 @@
 
       "tagline": "—— Build your English brain ——",
       "stage.video": "Video",
-      "stage.previewHint": "This is a 30-second sample render. Click Generate video to record your own with the loaded assets.",
+      "stage.previewHint": "Your recorded video will appear here. Click Generate preview to scrub through the layout, or Generate video to record and download an MP4 / WebM.",
 
       "status.ready": "Ready: load assets then click Generate preview or Generate video",
       "status.analyzing": "Analyzing waveform…",
@@ -95,6 +99,10 @@
       "file.fontMain": "正文字体（英 / 中）",
       "file.fontTag": "标语字体",
       "file.demoText": "演示字幕文本（无 SRT 时显示）",
+      "file.demoNote": "SRT 已加载（{0} 条）——上方 demo 文本被忽略。",
+      "file.demoNoteClear": "清除 SRT",
+      "file.demoNoteReady": "未加载 SRT — 这两行文字会作为字幕显示。",
+      "file.demoNoteEmpty": "在上方填入英中各一行（或上传 SRT）。",
       "file.recDuration": "录制时长（秒，0 = 整段）",
       "file.recHint": "录制为实时进行",
       "file.chooseAudio": "选择音频…",
@@ -113,7 +121,7 @@
 
       "tagline": "—— 这样建立你的英语脑 ——",
       "stage.video": "视频",
-      "stage.previewHint": "这是 30 秒样片。点击 Generate video 用当前素材录制你自己的版本。",
+      "stage.previewHint": "录制好的视频会出现在这里。点「生成预览」可拖动时间轴查看版式；点「生成视频」会实时录制并下载 MP4 / WebM。",
 
       "status.ready": "就绪：加载素材后点「生成预览」或「生成视频」",
       "status.analyzing": "分析声波 …",

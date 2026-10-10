@@ -263,7 +263,43 @@ button.clear {
   object-fit: contain;
 }
 
-#canvas[hidden] { display: none !important; }
+/* Recording canvas: rendered off-screen so captureStream() gets frames.
+   `display:none` / `hidden` would produce an empty recording. */
+#canvas {
+  position: absolute;
+  left: -10000px;
+  top: -10000px;
+  width: 1920px;
+  height: 1080px;
+  pointer-events: none;
+}
+
+/* Inline hint shown under the demo subtitle inputs when SRT is active. */
+.demo-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(246, 223, 19, 0.10);
+  border: 1px solid rgba(246, 223, 19, 0.30);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  flex-wrap: wrap;
+}
+.demo-note[hidden] { display: none !important; }
+.demo-note-clear {
+  padding: 2px 8px !important;
+  font-size: 12px !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  color: var(--accent) !important;
+  border: 1px solid var(--accent) !important;
+  white-space: nowrap;
+}
+.demo-note-clear:hover { background: var(--accent) !important; color: #1c1c1c !important; }
 
 /* ---------- footer ---------- */
 
