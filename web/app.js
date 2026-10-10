@@ -473,12 +473,12 @@ const CLEAR = {
 // 按相对路径自动找文件：页面旁的 assets/ 等目录，或上级目录（整个项目托管时）
 // file:// 打开时 fetch 被浏览器禁止，自动跳过并提示手动选择
 const DEFAULTS = [
-  ["fontMain", ["fonts/AlibabaPuHuiTi-Bold.otf", "../fonts/AlibabaPuHuiTi-Bold.otf"]],
-  ["fontTag", ["fonts/AlibabaPuHuiTi-Regular.otf", "../fonts/AlibabaPuHuiTi-Regular.otf"]],
+  ["fontMain", ["AlibabaPuHuiTi-Bold.otf", "fonts/AlibabaPuHuiTi-Bold.otf", "../fonts/AlibabaPuHuiTi-Bold.otf"]],
+  ["fontTag", ["AlibabaPuHuiTi-Regular.otf", "fonts/AlibabaPuHuiTi-Regular.otf", "../fonts/AlibabaPuHuiTi-Regular.otf"]],
   ["imgLeft", ["Podcaster.webp", "assets/Podcaster.webp", "../assets/Podcaster.webp"]],
-  ["srt", ["subtitles/bilingual.srt", "../subtitles/bilingual.srt"]],
-  ["bgm", ["assets/bgm.mp3", "../assets/bgm.mp3"]],
-  ["voice", ["assets/slow_english.mp3", "../assets/slow_english.mp3"]],
+  ["srt", ["bilingual.srt", "subtitles/bilingual.srt", "../subtitles/bilingual.srt"]],
+  ["bgm", ["bgm.mp3", "assets/bgm.mp3", "../assets/bgm.mp3"]],
+  ["voice", ["slow_english.mp3", "assets/slow_english.mp3", "../assets/slow_english.mp3"]],
 ];
 
 async function loadDefaults() {

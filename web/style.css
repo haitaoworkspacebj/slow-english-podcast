@@ -7,9 +7,13 @@
   --muted: #b5b5b5;
   --accent: #f6df13;
   --video-bg: #484848;
+  --pad-x: 28px;
+  --controls-w: 380px;
 }
 
 * { box-sizing: border-box; }
+
+html, body { overflow-x: hidden; }
 
 body {
   margin: 0;
@@ -18,15 +22,43 @@ body {
   font: 15px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
-header { padding: 22px 28px 6px; }
+/* ---------- header ---------- */
+
+header { padding: 22px var(--pad-x) 6px; }
 header h1 { margin: 0; font-size: 22px; }
-header p { margin: 6px 0 0; color: var(--muted); }
+header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+
+.hdr-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.lang-switch select {
+  background: #1c1c1c;
+  color: #f4f4f4;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ---------- main grid: controls (sidebar) + stage ---------- */
 
 main {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: var(--controls-w) 1fr;
   gap: 20px;
-  padding: 18px 28px 32px;
+  padding: 18px var(--pad-x) 32px;
   align-items: start;
 }
 
@@ -35,23 +67,20 @@ main {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 18px;
+  min-width: 0;            /* let children shrink on narrow screens */
 }
 
 .field { margin-bottom: 14px; }
-
 label {
   display: block;
   font-size: 13px;
   color: var(--muted);
   margin-bottom: 6px;
 }
-
 label.sub { margin-top: 10px; }
 
-.row { display: flex; gap: 8px; align-items: center; }
+.row, .filerow { display: flex; gap: 8px; align-items: center; }
 .row.slider { margin-top: 8px; }
-
-.filerow { display: flex; gap: 8px; align-items: center; }
 
 .fname {
   flex: 1;
@@ -73,10 +102,8 @@ select, input[type="text"], input[type="number"] {
   padding: 8px 10px;
   font-size: 14px;
 }
-
 input[type="number"] { width: 110px; flex: none; }
 input[type="text"] { width: 100%; margin-bottom: 8px; }
-
 input[type="range"] { flex: 1; accent-color: var(--accent); }
 .row.slider span { min-width: 56px; text-align: right; color: var(--muted); font-size: 13px; }
 
@@ -90,17 +117,14 @@ button {
   cursor: pointer;
   white-space: nowrap;
 }
-
 button:hover { border-color: var(--accent); }
 button:disabled { opacity: 0.45; cursor: default; }
-
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #1c1c1c;
   font-weight: 600;
 }
-
 button.clear {
   padding: 6px 10px;
   color: var(--muted);
@@ -108,8 +132,10 @@ button.clear {
   line-height: 1;
 }
 
-.actions { display: flex; gap: 10px; margin: 18px 0 12px; }
-.actions button { flex: 1; padding: 11px 0; }
+.actions { display: flex; gap: 10px; margin: 18px 0 12px; flex-wrap: wrap; }
+.actions button { flex: 1 1 auto; padding: 11px 0; min-width: 120px; }
+.tts-actions { margin: 12px 0 8px; }
+.tts-actions button { padding: 9px 6px; font-size: 13px; }
 
 .hint { font-size: 12px; color: var(--muted); }
 
@@ -122,7 +148,6 @@ button.clear {
   overflow: hidden;
   margin-top: 6px;
 }
-
 #bar {
   height: 100%;
   width: 0;
@@ -130,7 +155,14 @@ button.clear {
   transition: width 0.4s;
 }
 
-.stage { display: flex; flex-direction: column; gap: 20px; }
+/* ---------- stage (canvas + video) ---------- */
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
 
 .panel {
   background: var(--panel);
@@ -138,7 +170,6 @@ button.clear {
   border-radius: 12px;
   padding: 14px 16px 16px;
 }
-
 .panel h2 {
   margin: 0 0 10px;
   font-size: 14px;
@@ -146,17 +177,22 @@ button.clear {
   font-weight: 600;
 }
 
-.panel canvas, .panel video {
+/* Canvas / video always preserve the 16:9 intrinsic ratio */
+.panel canvas,
+.panel video {
   display: block;
   width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
   border-radius: 8px;
   background: var(--video-bg);
+  object-fit: contain;
 }
 
 .links { margin: 10px 0 0; font-size: 14px; }
 .links a { color: var(--accent); }
 
-/* ---------- 语音合成面板 ---------- */
+/* ---------- TTS panel ---------- */
 
 .tts { border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 16px; }
 .tts-title { color: var(--text); font-size: 14px; font-weight: 600; }
@@ -179,9 +215,6 @@ textarea {
   flex: none;
 }
 
-.tts-actions { margin: 12px 0 8px; }
-.tts-actions button { padding: 9px 6px; font-size: 13px; }
-
 .tts-loading {
   display: flex;
   align-items: center;
@@ -190,7 +223,6 @@ textarea {
   font-size: 13px;
   color: var(--muted);
 }
-
 .spinner {
   width: 18px;
   height: 18px;
@@ -200,7 +232,6 @@ textarea {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
-
 @keyframes spin { to { transform: rotate(360deg); } }
 
 #ttsStatus { min-height: 20px; font-size: 12px; color: var(--muted); }
@@ -210,30 +241,39 @@ details { margin: 10px 0 4px; font-size: 13px; }
 details summary { color: var(--muted); cursor: pointer; user-select: none; }
 details .row { margin-top: 8px; }
 details .hint { margin-top: 6px; line-height: 1.5; }
-
 #ttsEngineHint { margin-top: 6px; line-height: 1.5; }
 
-/* header layout + language switch */
-.hdr-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+/* ---------- responsive ---------- */
+
+/* <= 1100px: tighter sidebar */
+@media (max-width: 1100px) {
+  :root { --controls-w: 320px; --pad-x: 20px; }
+  header { padding: 18px var(--pad-x) 4px; }
+  header h1 { font-size: 20px; }
+  main { padding: 14px var(--pad-x) 24px; gap: 16px; }
+  .controls { padding: 14px; }
 }
-.lang-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--muted, #888);
+
+/* <= 820px: single column, controls on top, stage below */
+@media (max-width: 820px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+  .controls, .stage { width: 100%; }
+  .stage { order: 2; }
+  .panel canvas, .panel video { max-height: 56vw; }
 }
-.lang-switch select {
-  background: #1c1c1c;
-  color: #f4f4f4;
-  border: 1px solid var(--line, #333);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 13px;
-  cursor: pointer;
+
+/* <= 520px: phones */
+@media (max-width: 520px) {
+  :root { --pad-x: 14px; }
+  header h1 { font-size: 18px; }
+  header p { font-size: 13px; }
+  main { padding: 12px var(--pad-x) 18px; gap: 12px; }
+  .controls { padding: 12px; }
+  .actions button { font-size: 13px; padding: 10px 8px; min-width: 0; }
+  .tts-actions button { font-size: 12px; padding: 8px 4px; }
+  .panel { padding: 10px 12px 12px; }
+  .panel canvas, .panel video { max-height: 56vw; }
+  .field { margin-bottom: 12px; }
 }
