@@ -2,11 +2,17 @@
 
 Generate slow-English podcast videos with bilingual subtitles, voice-driven waveform, and optional BGM. Built as both a Python offline renderer and a self-contained browser demo.
 
+## Preview (30-second sample)
+
+<video src="https://haituoworkspacebj.github.io/slow-english-podcast/slow_english_demo.mp4" controls width="720" preload="metadata"></video>
+
+A 30-second sample rendered from the bundled `assets/slow_english.mp3` + `assets/bgm.mp3` + `assets/Podcaster.webp`, with the bilingual SRT. The waveform follows the voice track only — adding BGM does not change it.
+
 ## Live demo
 
 **https://haituoworkspacebj.github.io/slow-english-podcast/**
 
-The demo runs entirely in your browser — no upload, no server. Pick voice / BGM / image / fonts / SRT (or generate voice via EdgeTTS), preview the layout, then record the canvas + audio mix as MP4/WebM.
+The demo runs entirely in your browser — no upload, no server. Pick voice / BGM / image / fonts / SRT (or generate voice via EdgeTTS), preview the layout, then record the canvas + audio mix as MP4/WebM. Defaults are auto-loaded on first open.
 
 ## Developer's site (more backend features)
 
