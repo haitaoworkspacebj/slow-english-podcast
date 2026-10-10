@@ -2,6 +2,8 @@
 
 Generate slow-English podcast videos with bilingual subtitles, voice-driven waveform, and optional BGM. Built as both a Python offline renderer and a self-contained browser demo.
 
+> 其他语言：[中文版 README](./README.zh.md)
+
 ## Preview (30-second sample)
 
 <video src="https://haituoworkspacebj.github.io/slow-english-podcast/slow_english_demo.mp4" controls width="720" preload="metadata"></video>
@@ -45,3 +47,7 @@ This project is also hosted on the developer's own site, **podxero.com**, which 
 ## License
 
 Source: see repository. Fonts: Alibaba PuHuiTi is free for commercial use under its published license; do not substitute PingFang for published video.
+
+## Internationalization
+
+The browser demo is fully bilingual. `web/i18n.js` ships `en` + `zh` dictionaries; every visible string in `web/index.html` is wired through a `data-i18n` attribute, and runtime status messages go through `I18N.t(key, …args)`. The language switcher (top-right) saves to `localStorage` so the choice persists across reloads. To add a new language, append a column to `STRINGS` in `web/i18n.js` and an `<option>` to the `#langSwitch` select — no other code changes required.
