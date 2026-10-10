@@ -119,6 +119,32 @@ input[type="text"] { width: 100%; margin-bottom: 8px; }
 input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
 .row.slider span { min-width: 56px; text-align: right; color: var(--muted); font-size: 13px; }
 
+/* EN / 中 language chip next to demo subtitle inputs */
+.subpair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 8px;
+}
+.subpair input[type="text"] { flex: 1; min-width: 0; margin-bottom: 0; }
+.sublang {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
 button {
   background: var(--panel-2);
   color: var(--text);

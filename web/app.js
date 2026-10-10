@@ -456,7 +456,7 @@ async function loadAudio(file) {
   return ac.decodeAudioData(await file.arrayBuffer());
 }
 
-// ---------- 文件预检测 ----------
+// ---------- file precheck ----------
 
 function sniff(head, kind) {
   if (head.length < 4) return false;
