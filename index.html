@@ -92,15 +92,8 @@
         </p>
       </div>
 
-      <div class="actions">
-        <button id="btnPlay" class="primary" data-i18n="btn.play">▶ Generate preview</button>
-        <button id="btnStop" data-i18n="btn.stop">■ Stop</button>
-        <button id="btnRecord" data-i18n="btn.record">● Generate video</button>
-      </div>
-
       <div id="status" data-i18n="status.ready">Ready: load assets then click Generate video</div>
       <div class="progress"><div id="bar"></div></div>
-      <p class="download-row"><a id="downloadLink" hidden data-i18n="download.link">↓ Download video</a></p>
       <div id="errorBox" hidden></div>
     </section>
 
@@ -109,6 +102,12 @@
         <h2 data-i18n="stage.video">Video</h2>
         <video id="player" controls playsinline preload="metadata"></video>
         <p class="hint" data-i18n="stage.previewHint">Your recorded video will appear here. Click Generate preview to scrub through the layout, or Generate video to record and download an MP4 / WebM.</p>
+        <div class="actions">
+          <button id="btnPlay" class="primary" data-i18n="btn.play">▶ Generate preview</button>
+          <button id="btnStop" data-i18n="btn.stop">■ Stop</button>
+          <button id="btnRecord" data-i18n="btn.record">● Generate video</button>
+        </div>
+        <p class="download-row"><a id="downloadLink" hidden data-i18n="download.link">↓ Download video</a></p>
       </div>
     </section>
   </main>
