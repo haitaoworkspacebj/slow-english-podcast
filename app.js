@@ -349,6 +349,16 @@ let audioCtx = null, nodes = [], playStart = 0, rafId = 0, tickTimer = 0, record
 // restoring the right panel to the demo (or last recording); record ends by
 // leaving the canvas stream in place until setVideoToRecorded swaps in the blob.
 let _lastPlayMode = null;
+// Voice FFT cache: skip the (slow) barLevels recomputation when the user picks
+// the same voice again. Keyed by name + size + lastModified so a genuinely new
+// audio file always re-runs FFT. Persisted to localforage on save so a
+// reload → tryAutoRestore cycle also skips it.
+let _voiceFingerprint = null;
+let _voiceLevelsCache = null;
+
+function voiceFingerprint(file) {
+  return `${file.name || ""}|${file.size}|${file.lastModified || 0}`;
+}
 
 function ensureCtx() {
   if (!audioCtx) audioCtx = new AudioContext();
@@ -757,9 +767,20 @@ const HANDLERS = {
     try {
       const pre = await precheckFile(file, "voice");
       if (!pre.ok) { showError(pre.reason); setStatus(t("status.ready")); return; }
+      const fp = voiceFingerprint(file);
       S.voice = await loadAudio(file);
       S._voiceFile = file;
       S.voiceName = file.name;
+      // Skip the (slow) FFT when the user re-picks the exact same voice file
+      // within a session, or when tryAutoRestore primed the cache from a
+      // prior localforage save. A new fingerprint always re-runs it.
+      if (_voiceFingerprint === fp && _voiceLevelsCache) {
+        S.levels = _voiceLevelsCache;
+        nameEl.textContent = file.name;
+        drawFrame(0);
+        setStatus(t("status.voiceLoaded", file.name, S.voice.duration.toFixed(1)));
+        return;
+      }
       setStatus(t("status.loadingVoice"));
       await new Promise((r) => setTimeout(r, 30));
       try {
@@ -768,6 +789,8 @@ const HANDLERS = {
         showError(`${t("error.fft")} (${file.name}): ${err.message}`);
         S.levels = null;
       }
+      _voiceFingerprint = fp;
+      _voiceLevelsCache = S.levels;
       nameEl.textContent = file.name;
       drawFrame(0);
       setStatus(t("status.voiceLoaded", file.name, S.voice.duration.toFixed(1)));
@@ -903,6 +926,7 @@ const CLEAR = {
   srt() {
     S.cues = [];
     S.srtName = "";
+    S._srtFile = null;
     $("srtName").textContent = t("file.notSelectedWithDemo");
     refreshDemoNote();
   },
@@ -1010,7 +1034,15 @@ for (const id of ["fontMain", "fontTag"]) {
 }
 
 for (const id of ["enText", "zhText"]) {
-  $(id).addEventListener("input", () => drawFrame(0));
+  $(id).addEventListener("input", () => {
+    // Auto-clear SRT when the user edits the demo text — otherwise the SRT
+    // cues silently win in cueAt() and the edit appears to do nothing.
+    // The user can still re-upload the SRT if they want both.
+    if (S.cues && S.cues.length) {
+      CLEAR.srt();
+    }
+    drawFrame(0);
+  });
 }
 
 const demoNoteClearBtn = $("demoNoteClear");
@@ -1099,6 +1131,19 @@ async function saveAll() {
     }
   }
 
+  // Voice FFT cache — save the fingerprint + the barLevels result alongside
+  // the audio blob. On the next reload, tryAutoRestore primes the module-level
+  // cache so HANDLERS.voice skips the (slow) FFT recomputation.
+  if (S._voiceFile && S.levels) {
+    try { await localforage.setItem("asset.voice.fingerprint", voiceFingerprint(S._voiceFile)); }
+    catch (err) { console.warn("save voice fingerprint failed", err); }
+    try { await localforage.setItem("asset.voice.levels", Array.from(S.levels)); }
+    catch (err) { console.warn("save voice levels failed", err); }
+  } else {
+    try { await localforage.removeItem("asset.voice.fingerprint"); } catch (e) {}
+    try { await localforage.removeItem("asset.voice.levels"); } catch (e) {}
+  }
+
   if (btn) btn.classList.remove("is-saving");
 
   // Status / button label outcome
@@ -1139,6 +1184,8 @@ async function clearAll() {
 
   // Reset RAM state
   S.voice = null; S._voiceFile = null; S.voiceName = ""; S.levels = null;
+  _voiceFingerprint = null;
+  _voiceLevelsCache = null;
   S.bgm = null; S._bgmFile = null; S.bgmName = "";
   S.imgLeft = null; S._imgLeftFile = null;
   S._fontMainFile = null; S._fontTagFile = null;
@@ -1191,6 +1238,20 @@ async function tryAutoRestore() {
   setStatus(t("status.restoring"));
   setGlobalLoading(true);
 
+  // Prime the voice FFT cache from a prior save so HANDLERS.voice can skip
+  // the (slow) barLevels recomputation. We don't know the voice's fingerprint
+  // until the asset entry is read below, but we can still load the cached
+  // levels here and let the handler overwrite them only if the fingerprint
+  // diverges.
+  try {
+    const savedFp = await localforage.getItem("asset.voice.fingerprint");
+    const savedLevels = await localforage.getItem("asset.voice.levels");
+    if (typeof savedFp === "string" && Array.isArray(savedLevels)) {
+      _voiceFingerprint = savedFp;
+      _voiceLevelsCache = new Float32Array(savedLevels);
+    }
+  } catch (e) { /* levels not saved yet — fine */ }
+
   const assetMap = [
     ["asset.voice", "voice"],
     ["asset.bgm", "bgm"],
@@ -1206,6 +1267,13 @@ async function tryAutoRestore() {
     if (!entry || !entry.blob) continue;
     try {
       const file = new File([entry.blob], entry.name || handlerName, { type: entry.blob.type });
+      // For voice: if our primed fingerprint matches the saved blob's
+      // fingerprint, skip the FFT in HANDLERS.voice by setting the cache.
+      if (handlerName === "voice" && _voiceFingerprint && _voiceFingerprint === voiceFingerprint(file)) {
+        // Cache already matches — HANDLERS.voice will hit its cache branch.
+        // If the user changed the file in another tab and the fingerprint
+        // diverged, the handler will recompute and overwrite our cache.
+      }
       await HANDLERS[handlerName](file);
       restored++;
     } catch (e) {
