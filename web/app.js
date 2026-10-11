@@ -1,7 +1,10 @@
 /* Slow English Podcast · static demo — layout constants kept in sync with render.py.
    Right side: single <video> element with native browser controls.
-   Default src is the bundled demo. Generate video records an offscreen canvas + audio
-   mix, then swaps the video src to the recorded blob and shows a download link. */
+   Default src is the bundled demo (muted autoplay loop). Preview / Record swap the
+   video srcObject to a live canvas captureStream so the user's edits (subtitle
+   text etc.) appear in the panel in real time. When playback stops we swap back:
+   to the most recent recording if any, otherwise to the demo mp4. The recorded
+   blob URL is set via setVideoToRecorded on the recording's onstop handler. */
 const t = (key, ...args) => window.I18N ? window.I18N.t(key, ...args) : key;
 
 const W = 1920, H = 1080, FPS = 30;
@@ -342,6 +345,10 @@ function drawFrame(t) {
 }
 
 let audioCtx = null, nodes = [], playStart = 0, rafId = 0, tickTimer = 0, recorder = null, recChunks = [], recStopAt = 0, destForRec = null;
+// Which playback kind is currently driving the canvas / audio. preview ends by
+// restoring the right panel to the demo (or last recording); record ends by
+// leaving the canvas stream in place until setVideoToRecorded swaps in the blob.
+let _lastPlayMode = null;
 
 function ensureCtx() {
   if (!audioCtx) audioCtx = new AudioContext();
@@ -349,7 +356,56 @@ function ensureCtx() {
   return audioCtx;
 }
 
-function stopPlayback() {
+// Swap the right-side video to a live captureStream of the canvas so the
+// panel shows what Preview / Record are actually rendering. Idempotent — if
+// srcObject is already a stream, it does nothing. Crucially the stream has
+// no audio tracks, so this also stops the demo mp4's own audio from leaking
+// in alongside the audio-context playback (the "2 voices overlap" bug).
+function attachCanvasStream() {
+  if (video.srcObject) return;
+  try {
+    if (!video.paused) video.pause();
+    video.removeAttribute("src");
+    video.srcObject = canvas.captureStream(FPS);
+  } catch (e) {
+    console.warn("attachCanvasStream failed", e);
+  }
+}
+
+// Detach whatever stream / src is currently driving the video and reattach
+// the right panel content: prefer the most recent recording, otherwise the
+// demo mp4 (muted autoplay loop). Stops the stream tracks so the canvas capture
+// doesn't keep spinning after we leave live-preview mode.
+function restoreRightPanelVideo() {
+  try {
+    if (video.srcObject) {
+      const stream = video.srcObject;
+      video.srcObject = null;
+      stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
+    }
+  } catch (e) {}
+  try {
+    video.muted = true;
+    if (S.lastBlob && S.lastUrl) {
+      video.src = S.lastUrl;
+    } else {
+      video.poster = "slow_english_demo.jpg";
+      video.src = "slow_english_demo.mp4";
+    }
+    video.load();
+    video.play().catch(() => {});  // autoplay + loop (muted, so no audio leak)
+  } catch (e) {
+    console.warn("restoreRightPanelVideo failed", e);
+  }
+}
+
+function stopPlayback(opts) {
+  // opts.restoreDemo — also put the right-side panel back to the demo /
+  // last-recording state. Only true when stop is externally triggered (voice
+  // ended, Stop button, record step() reached its limit). Internal restarts
+  // from playWithDest must NOT pass this so the canvas stream survives the
+  // teardown.
+  const restoreDemo = !!(opts && opts.restoreDemo);
   nodes.forEach((n) => { try { n.stop(); } catch (e) {} });
   nodes = [];
   S.playing = false;
@@ -360,10 +416,12 @@ function stopPlayback() {
     setStatus(t("status.stopped"));
     setActionsState("idle");
     setVideoOverlay(null);
+    if (restoreDemo) restoreRightPanelVideo();
   }
 }
 
 function playWithDest(dest, mode /* "preview" | "record" */) {
+  _lastPlayMode = mode;
   stopPlayback();
   const ac = ensureCtx();
   const master = ac.createGain();
@@ -377,7 +435,10 @@ function playWithDest(dest, mode /* "preview" | "record" */) {
     v.buffer = S.voice;
     v.connect(master);
     v.start(playStart);
-    v.onended = () => { stopPlayback(); };
+    // Only preview-mode playback restores the right panel when the voice
+    // ends naturally. record-mode relies on the recorder's onstop → setVideoToRecorded
+    // chain to swap the canvas stream for the recorded blob.
+    v.onended = () => { stopPlayback({ restoreDemo: mode === "preview" }); _lastPlayMode = null; };
     nodes.push(v);
     endAt = playStart + S.voice.duration;
   }
@@ -430,6 +491,11 @@ function playWithDest(dest, mode /* "preview" | "record" */) {
 function preview() {
   if (!S.voice && !S.bgm) { showError(t("error.nothingToPreview")); return; }
   showError("");
+  // Swap the right panel to the live canvas stream so the user's edits to
+  // the subtitle inputs (and any other canvas content) are visible while
+  // preview plays. Stops the demo mp4's own audio so the audio context's
+  // playback isn't joined by a second voice from the <video> element.
+  attachCanvasStream();
   // playWithDest sets the busy action state internally.
   playWithDest(null, "preview");
 }
@@ -460,8 +526,22 @@ function setVideoToRecorded(blob) {
   if (S.lastUrl) URL.revokeObjectURL(S.lastUrl);
   S.lastBlob = blob;
   S.lastUrl = URL.createObjectURL(blob);
-  video.src = S.lastUrl;
-  video.load();
+  try {
+    // record-mode keeps the canvas stream running while recording. Detach it
+    // (and stop its tracks) before pointing video.src at the recording URL,
+    // otherwise we leak the stream and the recorded blob won't display.
+    if (video.srcObject) {
+      const stream = video.srcObject;
+      video.srcObject = null;
+      stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
+    }
+    video.muted = true;
+    video.src = S.lastUrl;
+    video.load();
+  } catch (e) {
+    console.warn("setVideoToRecorded swap failed", e);
+  }
+  _lastPlayMode = null;
   refreshDownloadLink();
 }
 
@@ -472,12 +552,10 @@ function record() {
   S.lastBlob = null;
   S.lastUrl = null;
   refreshDownloadLink();
-  // Pause and reset the right-side video so the demo doesn't keep
-  // playing while we record a new clip.
-  try { if (!video.paused) video.pause(); } catch (e) {}
-  video.removeAttribute("src");
-  try { video.load(); } catch (e) {}
+  // Stop any current playback and swap the right-side panel to the live
+  // canvas stream so the recording matches what the user sees on screen.
   stopPlayback();
+  attachCanvasStream();
   setProgress(0);
   showError("");
   setStatus(t("status.loadingRecord"));
@@ -502,6 +580,10 @@ function record() {
     setStatus(t("status.ready"));
     setActionsState("idle");
     setVideoOverlay(null);
+    // Recording aborted before any frames were captured. Drop the live
+    // stream and put the right panel back to demo / last recording.
+    restoreRightPanelVideo();
+    _lastPlayMode = null;
     return;
   }
   recChunks = [];
@@ -518,6 +600,8 @@ function record() {
       if (blob.size === 0) {
         showError(t("error.emptyRecording"));
         setStatus(t("status.ready"));
+        // No blob → fall back to the demo / prior recording.
+        restoreRightPanelVideo();
       } else {
         setVideoToRecorded(blob);
         setProgress(1);
@@ -526,6 +610,7 @@ function record() {
     } catch (err) {
       showError(`${t("error.recording")}: ${err.message || err}`);
       setStatus(t("status.ready"));
+      restoreRightPanelVideo();
     }
     setActionsState("idle");
     setVideoOverlay(null);
@@ -540,6 +625,8 @@ function record() {
     setStatus(t("status.ready"));
     setActionsState("idle");
     setVideoOverlay(null);
+    restoreRightPanelVideo();
+    _lastPlayMode = null;
   }
 }
 
@@ -947,7 +1034,13 @@ function updateActionAvailability() {
 
 $("btnPlay").addEventListener("click", () => { showError(""); preview(); });
 $("btnStop").addEventListener("click", () => {
-  stopPlayback();
+  // Externally-triggered stop: restore the right panel to demo / last recording.
+  // If the user clicks Stop mid-record we DON'T restore because the recorder's
+  // onstop will hand the panel off to the recorded blob (or the empty-recording
+  // path inside record() will restore for us).
+  const wasPreview = _lastPlayMode === "preview";
+  stopPlayback({ restoreDemo: wasPreview });
+  _lastPlayMode = null;
   setStatus(t("status.stopped"));
   setProgress(0);
   drawFrame(0);
@@ -1053,7 +1146,10 @@ async function clearAll() {
   S.lastBlob = null;
   if (S.lastUrl) { URL.revokeObjectURL(S.lastUrl); S.lastUrl = null; }
   S.fonts = [];
-  try { video.pause(); video.removeAttribute("src"); video.load(); } catch (e) {}
+  // Wipe both src and any srcObject (live canvas stream). restoreRightPanelVideo
+  // then reattaches the demo so the panel doesn't end up black.
+  try { video.pause(); } catch (e) {}
+  restoreRightPanelVideo();
   setVideoOverlay(null);
 
   // Reset DOM
