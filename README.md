@@ -4,10 +4,10 @@
 
 > 其他语言：[中文版 README](./README.zh.md)
 
-[![Live demo](https://img.shields.io/badge/demo-live-blue?style=flat-square)](https://haituoworkspacebj.github.io/slow-english-podcast/)
+[![Live demo](https://img.shields.io/badge/demo-live-blue?style=flat-square)](https://haitaoworkspacebj.github.io/slow-english-podcast/)
 [![License](https://img.shields.io/badge/license-see%20repo-lightgrey?style=flat-square)](#license)
 [![Languages](https://img.shields.io/badge/i18n-en%20%7C%20zh-success?style=flat-square)](#internationalization)
-[![Deploy](https://img.shields.io/badge/deploy-GitHub%20Pages-222?style=flat-square)](https://haituoworkspacebj.github.io/slow-english-podcast/)
+[![Deploy](https://img.shields.io/badge/deploy-GitHub%20Pages-222?style=flat-square)](https://haitaoworkspacebj.github.io/slow-english-podcast/)
 
 ---
 
@@ -21,7 +21,7 @@
 
 ### Try it now
 
-**→ https://haituoworkspacebj.github.io/slow-english-podcast/**
+**→ https://haitaoworkspacebj.github.io/slow-english-podcast/**
 
 The demo loads the bundled episode automatically. Replace any asset, preview the layout live, then click **Generate video** to record the canvas + audio mix and download the file. No upload, no server, no TTS — voice and BGM are user-supplied (defaults are pre-loaded from the bundled assets).
 
@@ -50,7 +50,7 @@ The demo loads the bundled episode automatically. Replace any asset, preview the
 
 ### 🌐 Browser demo (no install)
 
-1. Open https://haituoworkspacebj.github.io/slow-english-podcast/
+1. Open https://haitaoworkspacebj.github.io/slow-english-podcast/
 2. Click **▶ Generate preview** to render the layout live with the bundled voice + BGM
 3. Swap any of: voice, BGM, podcaster image, fonts, SRT (file picker on the left)
 4. Click **● Generate video** to record the canvas + audio mix; when it finishes, click the **↓ Download video** link that appears below the progress bar
@@ -139,7 +139,7 @@ For more detail see [`.claude/skills/slow-english-podcast/SKILL.md`](.claude/ski
 
 The same project also lives on [podxero.com](https://www.podxero.com/) with **more backend features**: cloud rendering queues, batch export, longer-form pipelines, asset library management. Visit there for the full version.
 
-> This GitHub repo and the `haituoworkspacebj.github.io` demo are read-only showcases. Anything you record in the browser stays in your browser unless you choose to upload it.
+> This GitHub repo and the `haitaoworkspacebj.github.io` demo are read-only showcases. Anything you record in the browser stays in your browser unless you choose to upload it.
 
 ---
 
@@ -166,7 +166,7 @@ Issues and small patches are welcome. For anything beyond a typo fix, open an is
 
 If this project saves you time or inspires something of your own, a star on GitHub helps others find it — and tells me the idea is worth investing more in.
 
-[**→ Star haituoworkspacebj/slow-english-podcast**](https://github.com/haituoworkspacebj/slow-english-podcast)
+[**→ Star haitaoworkspacebj/slow-english-podcast**](https://github.com/haitaoworkspacebj/slow-english-podcast)
 
 ---
 

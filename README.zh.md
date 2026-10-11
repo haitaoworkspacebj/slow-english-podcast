@@ -4,10 +4,10 @@
 
 > English version: [README.md](./README.md)
 
-[![Live demo](https://img.shields.io/badge/demo-在线-blue?style=flat-square)](https://haituoworkspacebj.github.io/slow-english-podcast/)
+[![Live demo](https://img.shields.io/badge/demo-在线-blue?style=flat-square)](https://haitaoworkspacebj.github.io/slow-english-podcast/)
 [![License](https://img.shields.io/badge/license-见仓库-lightgrey?style=flat-square)](#字体授权)
 [![Languages](https://img.shields.io/badge/i18n-中%20%7C%20英-success?style=flat-square)](#国际化)
-[![Deploy](https://img.shields.io/badge/部署-GitHub%20Pages-222?style=flat-square)](https://haituoworkspacebj.github.io/slow-english-podcast/)
+[![Deploy](https://img.shields.io/badge/部署-GitHub%20Pages-222?style=flat-square)](https://haitaoworkspacebj.github.io/slow-english-podcast/)
 
 ---
 
@@ -21,7 +21,7 @@
 
 ### 立即试用
 
-**→ https://haituoworkspacebj.github.io/slow-english-podcast/**
+**→ https://haitaoworkspacebj.github.io/slow-english-podcast/**
 
 打开后自动加载默认一集。替换素材 → 实时预览版式 → 点 **Generate video** 录制画布和混音 → 点下方出现的「↓ 下载视频」链接拿到文件。无上传、无服务器、无 TTS——人声和 BGM 都由用户本地提供（默认素材已预打包）。
 
@@ -50,7 +50,7 @@
 
 ### 🌐 浏览器 demo（免安装）
 
-1. 打开 https://haituoworkspacebj.github.io/slow-english-podcast/
+1. 打开 https://haitaoworkspacebj.github.io/slow-english-podcast/
 2. 点 **▶ Generate preview** 用自带的人声 + BGM 实时预览版式
 3. 左侧文件选择器替换任一项素材：人声 / BGM / 小人图 / 字体 / SRT
 4. 点 **● Generate video** 录制画布 + 混音；完成后下方进度条下面会出现「↓ 下载视频」链接，点击即可下载
@@ -139,7 +139,7 @@ python3 render.py video \
 
 本项目也在开发者的自有网站 [podxero.com](https://www.podxero.com/) 上线，那里提供更多后台能力：**云端渲染队列、批量导出、长视频流水线、素材库管理**。需要全功能版本请访问 [podxero.com](https://www.podxero.com/)。
 
-> GitHub 仓库和 `haituoworkspacebj.github.io` 上的 demo 仅作展示。浏览器里录的视频默认留在本地，不会上传。
+> GitHub 仓库和 `haitaoworkspacebj.github.io` 上的 demo 仅作展示。浏览器里录的视频默认留在本地，不会上传。
 
 ---
 
@@ -165,7 +165,7 @@ python3 render.py video \
 
 如果这个项目帮你省了时间，或者启发了什么新点子——GitHub 上点个 ⭐ 就能让更多人发现它，也让我更有动力继续投入。
 
-[**→ Star haituoworkspacebj/slow-english-podcast**](https://github.com/haituoworkspacebj/slow-english-podcast)
+[**→ Star haitaoworkspacebj/slow-english-podcast**](https://github.com/haitaoworkspacebj/slow-english-podcast)
 
 ---
 
